@@ -8,6 +8,7 @@ import com.example.demo.dto.Suggestion;
 import com.example.demo.dto.SummaryResponse;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -15,6 +16,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
+@Component
 public class NlpCloudMapper {
 
     private final ObjectMapper objectMapper;

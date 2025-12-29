@@ -2,8 +2,7 @@ package com.example.demo.service;
 
 import com.example.demo.dto.*;
 import com.example.demo.exception.UpstreamServiceException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.example.demo.mapper.NlpCloudMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
@@ -11,14 +10,14 @@ import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.client.RestTemplate;
 
-import java.io.IOException;
 import java.util.*;
+import java.util.function.Function;
 
 @Service
 public class MedicalNlpService {
 
     private final RestTemplate restTemplate = new RestTemplate();
-    private final ObjectMapper mapper = new ObjectMapper();
+    private final NlpCloudMapper mapper;
 
     @Value("${nlpcloud.api.key}")
     private String apiKey;
@@ -26,25 +25,29 @@ public class MedicalNlpService {
     @Value("${nlpcloud.model}")
     private String model;
 
+    public MedicalNlpService(NlpCloudMapper mapper) {
+        this.mapper = mapper;
+    }
+
     public GrammarResponse checkGrammar(ClinicalNoteRequest request) {
-        return postForResponse("/grammar", request, this::mapGrammarResponse);
+        return postForResponse("/grammar", request, mapper::toGrammarResponse);
     }
 
     public EntityExtractionResponse extractEntities(ClinicalNoteRequest request) {
-        return postForResponse("/entities", request, this::mapEntityResponse);
+        return postForResponse("/entities", request, mapper::toEntityExtractionResponse);
     }
 
     public SummaryResponse summarize(ClinicalNoteRequest request) {
-        return postForResponse("/summarize", request, this::mapSummaryResponse);
+        return postForResponse("/summarize", request, mapper::toSummaryResponse);
     }
 
-    public KeywordsResponse keywords(ClinicalNoteRequest request) {
-        return postForResponse("/keywords", request, this::mapKeywordsResponse);
+    public KeywordResponse keywords(ClinicalNoteRequest request) {
+        return postForResponse("/keywords", request, mapper::toKeywordResponse);
     }
 
     private <T> T postForResponse(String path,
                                   ClinicalNoteRequest request,
-                                  ResponseMapper<T> mapperFunction) {
+                                  Function<String, T> mapperFunction) {
         String url = "https://api.nlpcloud.io/v1/" + model + path;
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -68,58 +71,13 @@ public class MedicalNlpService {
             if (response.getBody() == null) {
                 throw new UpstreamServiceException("Upstream NLP service returned an empty response");
             }
-            JsonNode jsonNode = mapper.readTree(response.getBody());
-            return mapperFunction.map(jsonNode);
+            return mapperFunction.apply(response.getBody());
         } catch (RestClientResponseException e) {
             throw new UpstreamServiceException("Upstream service responded with status " + e.getRawStatusCode(), e);
         } catch (RestClientException e) {
             throw new UpstreamServiceException("Failed to reach upstream NLP service", e);
-        } catch (IOException e) {
+        } catch (IllegalArgumentException e) {
             throw new UpstreamServiceException("Unable to parse upstream NLP response", e);
         }
-    }
-
-    private GrammarResponse mapGrammarResponse(JsonNode jsonNode) throws IOException {
-        String corrected = jsonNode.path("corrected_text").asText(jsonNode.path("text").asText(""));
-        List<String> feedback = new ArrayList<>();
-        if (jsonNode.has("feedback") && jsonNode.get("feedback").isArray()) {
-            jsonNode.get("feedback").forEach(node -> feedback.add(node.asText()));
-        }
-        if (feedback.isEmpty() && jsonNode.has("corrections")) {
-            jsonNode.get("corrections").forEach(node -> feedback.add(node.asText()));
-        }
-        return new GrammarResponse(corrected, feedback);
-    }
-
-    private EntityExtractionResponse mapEntityResponse(JsonNode jsonNode) throws IOException {
-        List<MedicalEntity> entities = new ArrayList<>();
-        if (jsonNode.has("entities")) {
-            jsonNode.get("entities").forEach(node -> {
-                String text = node.path("text").asText("");
-                String type = node.path("type").asText("");
-                int start = node.path("start").asInt(0);
-                int end = node.path("end").asInt(0);
-                entities.add(new MedicalEntity(text, type, start, end));
-            });
-        }
-        return new EntityExtractionResponse(entities);
-    }
-
-    private SummaryResponse mapSummaryResponse(JsonNode jsonNode) {
-        String summary = jsonNode.path("summary_text").asText(jsonNode.path("summary").asText(""));
-        return new SummaryResponse(summary);
-    }
-
-    private KeywordsResponse mapKeywordsResponse(JsonNode jsonNode) {
-        List<String> keywords = new ArrayList<>();
-        if (jsonNode.has("keywords")) {
-            jsonNode.get("keywords").forEach(node -> keywords.add(node.asText()));
-        }
-        return new KeywordsResponse(keywords);
-    }
-
-    @FunctionalInterface
-    private interface ResponseMapper<T> {
-        T map(JsonNode jsonNode) throws IOException;
     }
 }
