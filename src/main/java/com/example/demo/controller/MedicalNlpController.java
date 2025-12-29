@@ -1,6 +1,12 @@
 package com.example.demo.controller;
 
-import com.example.demo.dto.*;
+import com.example.demo.dto.ApiResult;
+import com.example.demo.dto.ClinicalNoteRequest;
+import com.example.demo.dto.EntityExtractionResponse;
+import com.example.demo.dto.ErrorResponse;
+import com.example.demo.dto.GrammarResponse;
+import com.example.demo.dto.KeywordResponse;
+import com.example.demo.dto.SummaryResponse;
 import com.example.demo.service.MedicalNlpService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -44,10 +50,10 @@ public class MedicalNlpController {
                             content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
             }
     )
-    public ApiResponse<GrammarResponse> grammar(@Valid @RequestBody ClinicalNoteRequest request) {
+    public ApiResult<GrammarResponse> grammar(@Valid @RequestBody ClinicalNoteRequest request) {
         long start = System.currentTimeMillis();
         GrammarResponse response = medicalNlpService.checkGrammar(request);
-        return ApiResponse.fromPayload(response, start);
+        return ApiResult.fromPayload(response, start);
     }
 
     @PostMapping("/entities")
@@ -72,10 +78,10 @@ public class MedicalNlpController {
                             content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
             }
     )
-    public ApiResponse<EntityExtractionResponse> entities(@Valid @RequestBody ClinicalNoteRequest request) {
+    public ApiResult<EntityExtractionResponse> entities(@Valid @RequestBody ClinicalNoteRequest request) {
         long start = System.currentTimeMillis();
         EntityExtractionResponse response = medicalNlpService.extractEntities(request);
-        return ApiResponse.fromPayload(response, start);
+        return ApiResult.fromPayload(response, start);
     }
 
     @PostMapping("/summarize")
@@ -100,10 +106,10 @@ public class MedicalNlpController {
                             content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
             }
     )
-    public ApiResponse<SummaryResponse> summarize(@Valid @RequestBody ClinicalNoteRequest request) {
+    public ApiResult<SummaryResponse> summarize(@Valid @RequestBody ClinicalNoteRequest request) {
         long start = System.currentTimeMillis();
         SummaryResponse response = medicalNlpService.summarize(request);
-        return ApiResponse.fromPayload(response, start);
+        return ApiResult.fromPayload(response, start);
     }
 
     @PostMapping("/keywords")
@@ -128,9 +134,9 @@ public class MedicalNlpController {
                             content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
             }
     )
-    public ApiResponse<KeywordResponse> keywords(@Valid @RequestBody ClinicalNoteRequest request) {
+    public ApiResult<KeywordResponse> keywords(@Valid @RequestBody ClinicalNoteRequest request) {
         long start = System.currentTimeMillis();
         KeywordResponse response = medicalNlpService.keywords(request);
-        return ApiResponse.fromPayload(response, start);
+        return ApiResult.fromPayload(response, start);
     }
 }

@@ -1,6 +1,6 @@
 package com.example.demo.controller;
 
-import com.example.demo.dto.ApiResponse;
+import com.example.demo.dto.ApiResult;
 import com.example.demo.dto.ClassificationResponse;
 import com.example.demo.dto.ErrorResponse;
 import com.example.demo.service.NlpCloudService;
@@ -51,9 +51,9 @@ public class AnalysisController {
                             content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
             }
     )
-    public ApiResponse<ClassificationResponse> analyze(@RequestParam @NotBlank(message = "Text is required") String text) {
+    public ApiResult<ClassificationResponse> analyze(@RequestParam @NotBlank(message = "Text is required") String text) {
         long start = System.currentTimeMillis();
         ClassificationResponse response = service.classify(text);
-        return ApiResponse.fromPayload(response, start);
+        return ApiResult.fromPayload(response, start);
     }
 }

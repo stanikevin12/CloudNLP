@@ -6,7 +6,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 @Schema(description = "Standard API envelope containing metadata and response payload")
-public class ApiResponse<T> {
+public class ApiResult<T> {
 
     @Schema(description = "Unique request identifier", example = "c1db6b9e-5bfa-4db3-9b65-1234567890ab")
     private String requestId;
@@ -19,20 +19,20 @@ public class ApiResponse<T> {
 
     private T data;
 
-    public ApiResponse() {
+    public ApiResult() {
     }
 
-    public ApiResponse(String requestId, Instant timestamp, long processingTimeMs, T data) {
+    public ApiResult(String requestId, Instant timestamp, long processingTimeMs, T data) {
         this.requestId = requestId;
         this.timestamp = timestamp;
         this.processingTimeMs = processingTimeMs;
         this.data = data;
     }
 
-    public static <T> ApiResponse<T> fromPayload(T payload, long startTimeMs) {
+    public static <T> ApiResult<T> fromPayload(T payload, long startTimeMs) {
         Instant now = Instant.now();
         long elapsed = Math.max(0, System.currentTimeMillis() - startTimeMs);
-        return new ApiResponse<>(UUID.randomUUID().toString(), now, elapsed, payload);
+        return new ApiResult<>(UUID.randomUUID().toString(), now, elapsed, payload);
     }
 
     public String getRequestId() {
