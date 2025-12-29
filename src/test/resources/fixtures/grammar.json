@@ -1,0 +1,19 @@
+{
+  "corrected_text": "This is the corrected text.",
+  "corrections": [
+    {
+      "type": "spelling",
+      "text": "Ths",
+      "suggestion": "This",
+      "start": 0,
+      "end": 3
+    },
+    {
+      "type": "grammar",
+      "text": "sentance",
+      "suggestion": "sentence",
+      "start": 18,
+      "end": 26
+    }
+  ]
+}

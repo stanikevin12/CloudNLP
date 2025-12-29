@@ -1,0 +1,18 @@
+{
+  "entities": [
+    {
+      "entity": "person",
+      "text": "John Doe",
+      "start": 0,
+      "end": 8,
+      "confidence": 0.98
+    },
+    {
+      "entity": "location",
+      "text": "Paris",
+      "start": 20,
+      "end": 25,
+      "confidence": 0.92
+    }
+  ]
+}
