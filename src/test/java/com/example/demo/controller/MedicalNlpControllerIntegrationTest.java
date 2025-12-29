@@ -31,7 +31,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class MedicalNlpControllerIntegrationTest {
 
-    private static MockWebServer mockWebServer;
+    private static final MockWebServer mockWebServer;
+
+    static {
+        mockWebServer = new MockWebServer();
+        try {
+            mockWebServer.start();
+        } catch (IOException e) {
+            throw new IllegalStateException("Failed to start MockWebServer", e);
+        }
+    }
 
     @Autowired
     private WebApplicationContext context;
@@ -51,9 +60,7 @@ class MedicalNlpControllerIntegrationTest {
     }
 
     @BeforeAll
-    void setup() throws IOException {
-        mockWebServer = new MockWebServer();
-        mockWebServer.start();
+    void setup() {
         mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
     }
 

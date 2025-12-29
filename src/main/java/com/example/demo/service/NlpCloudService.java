@@ -90,7 +90,7 @@ public class NlpCloudService {
         }
         if (throwable instanceof RestClientResponseException responseException) {
             return new UpstreamServiceException(
-                    "Upstream service responded with status " + responseException.getStatusCode().value(),
+                    "Upstream service responded with status " + responseException.getRawStatusCode(),
                     responseException);
         }
         if (throwable instanceof TimeoutException || throwable instanceof ResourceAccessException) {
