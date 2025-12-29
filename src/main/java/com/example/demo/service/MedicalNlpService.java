@@ -73,7 +73,7 @@ public class MedicalNlpService {
             }
             return mapperFunction.apply(response.getBody());
         } catch (RestClientResponseException e) {
-            throw new UpstreamServiceException("Upstream service responded with status " + e.getRawStatusCode(), e);
+            throw new UpstreamServiceException("Upstream service responded with status " + e.getStatusCode().value(), e);
         } catch (RestClientException e) {
             throw new UpstreamServiceException("Failed to reach upstream NLP service", e);
         } catch (IllegalArgumentException e) {
