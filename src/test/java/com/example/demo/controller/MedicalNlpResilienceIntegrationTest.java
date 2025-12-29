@@ -75,7 +75,8 @@ class MedicalNlpResilienceIntegrationTest {
                 .setBodyDelay(1, TimeUnit.SECONDS)
                 .setHeader("Content-Type", "application/json"));
 
-        ClinicalNoteRequest request = new ClinicalNoteRequest("Slow upstream", null);
+        ClinicalNoteRequest request = new ClinicalNoteRequest(
+                "Patient note experiencing slow upstream response for testing.", null);
 
         mockMvc.perform(MockMvcRequestBuilders.post("/api/nlp/grammar")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -95,7 +96,8 @@ class MedicalNlpResilienceIntegrationTest {
                 .setBody("{\"error\":\"temporary\"}")
                 .setHeader("Content-Type", "application/json"));
 
-        ClinicalNoteRequest request = new ClinicalNoteRequest("Upstream failure", null);
+        ClinicalNoteRequest request = new ClinicalNoteRequest(
+                "Patient note that should trigger upstream failure handling.", null);
 
         mockMvc.perform(MockMvcRequestBuilders.post("/api/nlp/grammar")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -114,7 +116,8 @@ class MedicalNlpResilienceIntegrationTest {
         mockWebServer.enqueue(new MockResponse().setResponseCode(500));
         mockWebServer.enqueue(new MockResponse().setResponseCode(500));
 
-        ClinicalNoteRequest request = new ClinicalNoteRequest("Retry this", null);
+        ClinicalNoteRequest request = new ClinicalNoteRequest(
+                "Patient note used to verify retry logic with sufficient length.", null);
 
         mockMvc.perform(MockMvcRequestBuilders.post("/api/nlp/grammar")
                         .contentType(MediaType.APPLICATION_JSON)
