@@ -60,7 +60,7 @@ public class ApiResult<T> {
     }
 
     public String getDisclaimer() {
-        return disclaimer;
+        return medicalDisclaimer;
     }
 
     public T getData() {
