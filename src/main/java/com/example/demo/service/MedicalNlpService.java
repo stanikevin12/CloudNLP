@@ -75,7 +75,7 @@ public class MedicalNlpService {
     }
 
     private <T> T executeWithRetry(String path, SupplierWithException<T> action) {
-        int attempts = properties.getMaxRetries() + 1;
+        int attempts = Math.min(properties.getMaxRetries(), 2) + 1;
         for (int attempt = 1; attempt <= attempts; attempt++) {
             try {
                 return action.get();
