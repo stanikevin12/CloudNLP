@@ -4,14 +4,14 @@ import java.util.List;
 
 public class GrammarResponse {
     private String correctedText;
-    private List<String> feedback;
+    private List<Suggestion> suggestions;
 
     public GrammarResponse() {
     }
 
-    public GrammarResponse(String correctedText, List<String> feedback) {
+    public GrammarResponse(String correctedText, List<Suggestion> suggestions) {
         this.correctedText = correctedText;
-        this.feedback = feedback;
+        this.suggestions = suggestions;
     }
 
     public String getCorrectedText() {
@@ -22,11 +22,11 @@ public class GrammarResponse {
         this.correctedText = correctedText;
     }
 
-    public List<String> getFeedback() {
-        return feedback;
+    public List<Suggestion> getSuggestions() {
+        return suggestions;
     }
 
-    public void setFeedback(List<String> feedback) {
-        this.feedback = feedback;
+    public void setSuggestions(List<Suggestion> suggestions) {
+        this.suggestions = suggestions;
     }
 }

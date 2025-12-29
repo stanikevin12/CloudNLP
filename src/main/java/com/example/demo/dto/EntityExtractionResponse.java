@@ -3,20 +3,20 @@ package com.example.demo.dto;
 import java.util.List;
 
 public class EntityExtractionResponse {
-    private List<MedicalEntity> entities;
+    private List<Entity> entities;
 
     public EntityExtractionResponse() {
     }
 
-    public EntityExtractionResponse(List<MedicalEntity> entities) {
+    public EntityExtractionResponse(List<Entity> entities) {
         this.entities = entities;
     }
 
-    public List<MedicalEntity> getEntities() {
+    public List<Entity> getEntities() {
         return entities;
     }
 
-    public void setEntities(List<MedicalEntity> entities) {
+    public void setEntities(List<Entity> entities) {
         this.entities = entities;
     }
 }

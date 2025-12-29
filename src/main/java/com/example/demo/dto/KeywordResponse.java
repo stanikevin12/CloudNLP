@@ -15,4 +15,8 @@ public class KeywordResponse {
     public List<String> getKeywords() {
         return keywords;
     }
+
+    public void setKeywords(List<String> keywords) {
+        this.keywords = keywords;
+    }
 }

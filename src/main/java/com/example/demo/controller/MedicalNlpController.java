@@ -17,22 +17,30 @@ public class MedicalNlpController {
     }
 
     @PostMapping("/grammar")
-    public GrammarResponse grammar(@Valid @RequestBody ClinicalNoteRequest request) {
-        return medicalNlpService.checkGrammar(request);
+    public ApiResponse<GrammarResponse> grammar(@Valid @RequestBody ClinicalNoteRequest request) {
+        long start = System.currentTimeMillis();
+        GrammarResponse response = medicalNlpService.checkGrammar(request);
+        return ApiResponse.fromPayload(response, start);
     }
 
     @PostMapping("/entities")
-    public EntityExtractionResponse entities(@Valid @RequestBody ClinicalNoteRequest request) {
-        return medicalNlpService.extractEntities(request);
+    public ApiResponse<EntityExtractionResponse> entities(@Valid @RequestBody ClinicalNoteRequest request) {
+        long start = System.currentTimeMillis();
+        EntityExtractionResponse response = medicalNlpService.extractEntities(request);
+        return ApiResponse.fromPayload(response, start);
     }
 
     @PostMapping("/summarize")
-    public SummaryResponse summarize(@Valid @RequestBody ClinicalNoteRequest request) {
-        return medicalNlpService.summarize(request);
+    public ApiResponse<SummaryResponse> summarize(@Valid @RequestBody ClinicalNoteRequest request) {
+        long start = System.currentTimeMillis();
+        SummaryResponse response = medicalNlpService.summarize(request);
+        return ApiResponse.fromPayload(response, start);
     }
 
     @PostMapping("/keywords")
-    public KeywordsResponse keywords(@Valid @RequestBody ClinicalNoteRequest request) {
-        return medicalNlpService.keywords(request);
+    public ApiResponse<KeywordResponse> keywords(@Valid @RequestBody ClinicalNoteRequest request) {
+        long start = System.currentTimeMillis();
+        KeywordResponse response = medicalNlpService.keywords(request);
+        return ApiResponse.fromPayload(response, start);
     }
 }
