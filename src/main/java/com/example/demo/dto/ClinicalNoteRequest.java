@@ -8,7 +8,7 @@ import jakarta.validation.constraints.Size;
 public class ClinicalNoteRequest {
 
     @NotBlank(message = "Clinical note is required")
-    @Size(max = 10000, message = "Clinical note must be 10,000 characters or fewer")
+    @Size(min = 20, max = 8000, message = "Clinical note must be between 20 and 8,000 characters to ensure sufficient clinical context")
     @Schema(description = "Primary clinical note or report", example = "Patient presents with chest pain and shortness of breath.")
     private String note;
 

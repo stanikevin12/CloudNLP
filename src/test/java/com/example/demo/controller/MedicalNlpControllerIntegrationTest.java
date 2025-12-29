@@ -104,7 +104,8 @@ class MedicalNlpControllerIntegrationTest {
     @Test
     void summarizeEndpointReturnsSummary() throws Exception {
         enqueueFixture("src/test/resources/fixtures/summary.json");
-        ClinicalNoteRequest request = new ClinicalNoteRequest("Patient presents...", null);
+        ClinicalNoteRequest request = new ClinicalNoteRequest(
+                "Patient presents with chest discomfort and dizziness today.", null);
 
         mockMvc.perform(MockMvcRequestBuilders.post("/api/nlp/summarize")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -120,7 +121,8 @@ class MedicalNlpControllerIntegrationTest {
     @Test
     void keywordsEndpointReturnsKeywords() throws Exception {
         enqueueFixture("src/test/resources/fixtures/keywords.json");
-        ClinicalNoteRequest request = new ClinicalNoteRequest("AI in healthcare", null);
+        ClinicalNoteRequest request = new ClinicalNoteRequest(
+                "AI in healthcare for clinical decision support systems.", null);
 
         mockMvc.perform(MockMvcRequestBuilders.post("/api/nlp/keywords")
                         .contentType(MediaType.APPLICATION_JSON)

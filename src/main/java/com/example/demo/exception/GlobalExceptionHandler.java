@@ -1,6 +1,13 @@
 package com.example.demo.exception;
 
+import com.example.demo.dto.ApiResult;
 import com.example.demo.dto.ErrorResponse;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.ConstraintViolationException;
+import java.time.Instant;
+import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.support.DefaultMessageSourceResolvable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -10,51 +17,57 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.client.RestClientException;
 
-import jakarta.validation.ConstraintViolationException;
-import java.time.Instant;
-import java.util.stream.Collectors;
-
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+    private static final String GENERIC_UPSTREAM_MESSAGE = "Unable to process NLP request at this time. Please try again later.";
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ErrorResponse> handleValidation(MethodArgumentNotValidException ex) {
+    public ResponseEntity<ErrorResponse> handleValidation(MethodArgumentNotValidException ex, HttpServletRequest request) {
         String message = ex.getBindingResult().getAllErrors().stream()
                 .map(DefaultMessageSourceResolvable::getDefaultMessage)
                 .collect(Collectors.joining("; "));
-        return build(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", message);
+        log.warn("Validation failed for {}: {}", request.getRequestURI(), message);
+        return build(HttpStatus.BAD_REQUEST, message, request);
     }
 
     @ExceptionHandler(ConstraintViolationException.class)
-    public ResponseEntity<ErrorResponse> handleConstraintViolation(ConstraintViolationException ex) {
+    public ResponseEntity<ErrorResponse> handleConstraintViolation(ConstraintViolationException ex, HttpServletRequest request) {
         String message = ex.getConstraintViolations().stream()
                 .map(violation -> violation.getPropertyPath() + ": " + violation.getMessage())
                 .collect(Collectors.joining("; "));
-        return build(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", message);
+        log.warn("Constraint violation for {}: {}", request.getRequestURI(), message);
+        return build(HttpStatus.BAD_REQUEST, message, request);
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
-    public ResponseEntity<ErrorResponse> handleUnreadable(HttpMessageNotReadableException ex) {
-        return build(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "Request body could not be parsed");
+    public ResponseEntity<ErrorResponse> handleUnreadable(HttpMessageNotReadableException ex, HttpServletRequest request) {
+        log.warn("Unreadable request body at {}: {}", request.getRequestURI(), ex.getClass().getSimpleName());
+        return build(HttpStatus.BAD_REQUEST, "Request body could not be parsed", request);
     }
 
     @ExceptionHandler(UpstreamServiceException.class)
-    public ResponseEntity<ErrorResponse> handleUpstream(UpstreamServiceException ex) {
-        return build(HttpStatus.BAD_GATEWAY, "UPSTREAM_ERROR", ex.getMessage());
+    public ResponseEntity<ErrorResponse> handleUpstream(UpstreamServiceException ex, HttpServletRequest request) {
+        log.warn("Upstream service error at {}: {}", request.getRequestURI(), ex.getMessage());
+        return build(HttpStatus.BAD_GATEWAY, ex.getMessage(), request);
     }
 
     @ExceptionHandler(RestClientException.class)
-    public ResponseEntity<ErrorResponse> handleRestClient(RestClientException ex) {
-        return build(HttpStatus.BAD_GATEWAY, "UPSTREAM_ERROR", "Unable to process NLP request at this time");
+    public ResponseEntity<ErrorResponse> handleRestClient(RestClientException ex, HttpServletRequest request) {
+        log.warn("Rest client exception at {}: {}", request.getRequestURI(), ex.getClass().getSimpleName());
+        return build(HttpStatus.BAD_GATEWAY, GENERIC_UPSTREAM_MESSAGE, request);
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ErrorResponse> handleGeneric(Exception ex) {
-        return build(HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL_ERROR", "An unexpected error occurred");
+    public ResponseEntity<ErrorResponse> handleGeneric(Exception ex, HttpServletRequest request) {
+        log.warn("Unexpected exception at {}: {}", request.getRequestURI(), ex.getClass().getSimpleName());
+        return build(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred", request);
     }
 
-    private ResponseEntity<ErrorResponse> build(HttpStatus status, String code, String message) {
-        return ResponseEntity.status(status)
-                .body(new ErrorResponse(code, message, Instant.now()));
+    private ResponseEntity<ErrorResponse> build(HttpStatus status, String message, HttpServletRequest request) {
+        String path = request != null ? request.getRequestURI() : "N/A";
+        ErrorResponse error = new ErrorResponse(Instant.now(), status.value(), message, path, ApiResult.MEDICAL_DISCLAIMER);
+        return ResponseEntity.status(status).body(error);
     }
 }

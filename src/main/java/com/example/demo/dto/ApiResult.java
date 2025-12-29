@@ -8,6 +8,8 @@ import java.util.UUID;
 @Schema(description = "Standard API envelope containing metadata and response payload")
 public class ApiResult<T> {
 
+    public static final String MEDICAL_DISCLAIMER = "This tool does not provide diagnosis.";
+
     @Schema(description = "Unique request identifier", example = "c1db6b9e-5bfa-4db3-9b65-1234567890ab")
     private String requestId;
 
@@ -17,22 +19,26 @@ public class ApiResult<T> {
     @Schema(description = "Processing duration in milliseconds", example = "123")
     private long processingTimeMs;
 
+    @Schema(description = "Medical safety disclaimer", example = "This tool does not provide diagnosis.")
+    private String disclaimer;
+
     private T data;
 
     public ApiResult() {
     }
 
-    public ApiResult(String requestId, Instant timestamp, long processingTimeMs, T data) {
+    public ApiResult(String requestId, Instant timestamp, long processingTimeMs, String disclaimer, T data) {
         this.requestId = requestId;
         this.timestamp = timestamp;
         this.processingTimeMs = processingTimeMs;
+        this.disclaimer = disclaimer;
         this.data = data;
     }
 
     public static <T> ApiResult<T> fromPayload(T payload, long startTimeMs) {
         Instant now = Instant.now();
         long elapsed = Math.max(0, System.currentTimeMillis() - startTimeMs);
-        return new ApiResult<>(UUID.randomUUID().toString(), now, elapsed, payload);
+        return new ApiResult<>(UUID.randomUUID().toString(), now, elapsed, MEDICAL_DISCLAIMER, payload);
     }
 
     public String getRequestId() {
@@ -45,6 +51,10 @@ public class ApiResult<T> {
 
     public long getProcessingTimeMs() {
         return processingTimeMs;
+    }
+
+    public String getDisclaimer() {
+        return disclaimer;
     }
 
     public T getData() {
