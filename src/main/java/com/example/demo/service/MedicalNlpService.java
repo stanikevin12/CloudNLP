@@ -4,6 +4,8 @@ import com.example.demo.config.NlpCloudProperties;
 import com.example.demo.dto.*;
 import com.example.demo.exception.UpstreamServiceException;
 import com.example.demo.mapper.NlpCloudMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -21,6 +23,9 @@ import java.util.function.Function;
 
 @Service
 public class MedicalNlpService {
+
+    private static final Logger log = LoggerFactory.getLogger(MedicalNlpService.class);
+    private static final String SAFE_UPSTREAM_MESSAGE = "Unable to process NLP request at this time. Please try again later.";
 
     private final RestTemplate nlpCloudRestTemplate;
     private final NlpCloudMapper mapper;
@@ -57,7 +62,7 @@ public class MedicalNlpService {
             payload.put("context", request.getPatientContext());
         }
 
-        String responseBody = executeWithRetry(() -> {
+        String responseBody = executeWithRetry(path, () -> {
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
             HttpEntity<Map<String, String>> requestEntity = new HttpEntity<>(payload, headers);
@@ -69,13 +74,15 @@ public class MedicalNlpService {
         return mapperFunction.apply(responseBody);
     }
 
-    private <T> T executeWithRetry(SupplierWithException<T> action) {
+    private <T> T executeWithRetry(String path, SupplierWithException<T> action) {
         int attempts = properties.getMaxRetries() + 1;
         for (int attempt = 1; attempt <= attempts; attempt++) {
             try {
                 return action.get();
             } catch (Exception ex) {
-                if (attempt == attempts || !isRetryable(ex)) {
+                boolean retryable = attempt < attempts && isRetryable(ex);
+                log.warn("Attempt {}/{} failed calling {}: {}", attempt, attempts, path, ex.getClass().getSimpleName());
+                if (!retryable) {
                     throw mapUpstreamError(ex);
                 }
                 try {
@@ -86,7 +93,7 @@ public class MedicalNlpService {
                 }
             }
         }
-        throw new UpstreamServiceException("Upstream NLP service did not respond after retries", null);
+        throw new UpstreamServiceException(SAFE_UPSTREAM_MESSAGE, null);
     }
 
     private boolean isRetryable(Throwable throwable) {
@@ -108,13 +115,13 @@ public class MedicalNlpService {
         }
         if (throwable instanceof RestClientResponseException responseException) {
             return new UpstreamServiceException(
-                    "NLP service returned an unexpected response",
+                    SAFE_UPSTREAM_MESSAGE,
                     responseException);
         }
         if (throwable instanceof TimeoutException || throwable instanceof ResourceAccessException) {
-            return new UpstreamServiceException("Timed out calling upstream NLP service", throwable);
+            return new UpstreamServiceException(SAFE_UPSTREAM_MESSAGE, throwable);
         }
-        return new UpstreamServiceException("Failed to reach upstream NLP service", throwable);
+        return new UpstreamServiceException(SAFE_UPSTREAM_MESSAGE, throwable);
     }
 
     @FunctionalInterface
