@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.util.List;
 
@@ -20,6 +21,7 @@ public class NlpCloudService {
     private String model;
 
     private final RestTemplate restTemplate = new RestTemplate();
+    private final ObjectMapper mapper = new ObjectMapper();
 
     public ClassificationResponse classify(String text) {
 
@@ -38,14 +40,22 @@ public class NlpCloudService {
         HttpEntity<ClassificationRequest> entity =
                 new HttpEntity<>(requestBody, headers);
 
-        ResponseEntity<ClassificationResponse> response =
+        // 👇 Receive RAW STRING (content-type safe)
+        ResponseEntity<String> response =
                 restTemplate.exchange(
                         url,
                         HttpMethod.POST,
                         entity,
-                        ClassificationResponse.class
+                        String.class
                 );
 
-        return response.getBody();
+        try {
+            return mapper.readValue(
+                    response.getBody(),
+                    ClassificationResponse.class
+            );
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to parse NLP Cloud response", e);
+        }
     }
 }
