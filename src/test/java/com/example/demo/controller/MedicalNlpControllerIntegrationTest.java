@@ -24,6 +24,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -78,6 +79,10 @@ class MedicalNlpControllerIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.path").value("/api/nlp/grammar"))
+                .andExpect(jsonPath("$.medicalDisclaimer").value("This tool does not provide diagnosis."))
+                .andExpect(jsonPath("$.error").value(nullValue()))
                 .andExpect(jsonPath("$.data.correctedText").value("This is the corrected text."))
                 .andExpect(jsonPath("$.data.suggestions[0].type").value("spelling"));
 
@@ -94,6 +99,10 @@ class MedicalNlpControllerIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.path").value("/api/nlp/entities"))
+                .andExpect(jsonPath("$.medicalDisclaimer").value("This tool does not provide diagnosis."))
+                .andExpect(jsonPath("$.error").value(nullValue()))
                 .andExpect(jsonPath("$.data.entities[0].text").value("John Doe"))
                 .andExpect(jsonPath("$.data.entities[1].entity").value("location"));
 
@@ -111,6 +120,10 @@ class MedicalNlpControllerIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.path").value("/api/nlp/summarize"))
+                .andExpect(jsonPath("$.medicalDisclaimer").value("This tool does not provide diagnosis."))
+                .andExpect(jsonPath("$.error").value(nullValue()))
                 .andExpect(jsonPath("$.data.summary").value("This is a concise summary of the report."))
                 .andExpect(jsonPath("$.data.keyFindings[1]").value("Finding two"));
 
@@ -128,6 +141,10 @@ class MedicalNlpControllerIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.path").value("/api/nlp/keywords"))
+                .andExpect(jsonPath("$.medicalDisclaimer").value("This tool does not provide diagnosis."))
+                .andExpect(jsonPath("$.error").value(nullValue()))
                 .andExpect(jsonPath("$.data.keywords[0]").value("nlp"));
 
         RecordedRequest recordedRequest = mockWebServer.takeRequest();
@@ -142,6 +159,10 @@ class MedicalNlpControllerIntegrationTest {
                         .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                         .param("text", "Space travel"))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.path").value("/analyze"))
+                .andExpect(jsonPath("$.medicalDisclaimer").value("This tool does not provide diagnosis."))
+                .andExpect(jsonPath("$.error").value(nullValue()))
                 .andExpect(jsonPath("$.data.labels[0]").value("space"))
                 .andExpect(jsonPath("$.data.scores[0]").value(0.83));
 

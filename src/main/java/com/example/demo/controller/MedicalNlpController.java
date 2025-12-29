@@ -4,7 +4,6 @@ import com.example.demo.config.MedicalDisclaimerFilter;
 import com.example.demo.dto.ApiResult;
 import com.example.demo.dto.ClinicalNoteRequest;
 import com.example.demo.dto.EntityExtractionResponse;
-import com.example.demo.dto.ErrorResponse;
 import com.example.demo.dto.GrammarResponse;
 import com.example.demo.dto.KeywordResponse;
 import com.example.demo.dto.SummaryResponse;
@@ -15,7 +14,11 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,25 +50,25 @@ public class MedicalNlpController {
             ),
             responses = {
                     @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Grammar checked",
-                            content = @Content(schema = @Schema(implementation = GrammarResponse.class)),
+                            content = @Content(schema = @Schema(implementation = ApiResult.class)),
                             headers = @Header(name = MedicalDisclaimerFilter.DISCLAIMER_HEADER, description = ApiResult.MEDICAL_DISCLAIMER)),
                     @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Validation error",
-                            content = @Content(schema = @Schema(implementation = ErrorResponse.class)),
+                            content = @Content(schema = @Schema(implementation = ApiResult.class)),
                             headers = @Header(name = MedicalDisclaimerFilter.DISCLAIMER_HEADER, description = ApiResult.MEDICAL_DISCLAIMER)),
                     @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "502", description = "NLP provider unavailable",
-                            content = @Content(schema = @Schema(implementation = ErrorResponse.class)),
+                            content = @Content(schema = @Schema(implementation = ApiResult.class)),
                             headers = @Header(name = MedicalDisclaimerFilter.DISCLAIMER_HEADER, description = ApiResult.MEDICAL_DISCLAIMER)),
                     @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Unexpected server error",
-                            content = @Content(schema = @Schema(implementation = ErrorResponse.class)),
+                            content = @Content(schema = @Schema(implementation = ApiResult.class)),
                             headers = @Header(name = MedicalDisclaimerFilter.DISCLAIMER_HEADER, description = ApiResult.MEDICAL_DISCLAIMER))
             }
     )
-    public ApiResult<GrammarResponse> grammar(@Valid @RequestBody ClinicalNoteRequest request) {
-        long start = System.currentTimeMillis();
+    public ResponseEntity<ApiResult<GrammarResponse>> grammar(@Valid @RequestBody ClinicalNoteRequest request, HttpServletRequest servletRequest) {
         log.info("Received grammar check request at /api/nlp/grammar");
         GrammarResponse response = medicalNlpService.checkGrammar(request);
-        log.info("Completed grammar check in {} ms", System.currentTimeMillis() - start);
-        return ApiResult.fromPayload(response, start);
+        log.info("Completed grammar check for /api/nlp/grammar");
+        ApiResult<GrammarResponse> body = ApiResult.success(200, servletRequest.getRequestURI(), response);
+        return ResponseEntity.ok(body);
     }
 
     @PostMapping("/entities")
@@ -81,25 +84,25 @@ public class MedicalNlpController {
             ),
             responses = {
                     @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Entities extracted",
-                            content = @Content(schema = @Schema(implementation = EntityExtractionResponse.class)),
+                            content = @Content(schema = @Schema(implementation = ApiResult.class)),
                             headers = @Header(name = MedicalDisclaimerFilter.DISCLAIMER_HEADER, description = ApiResult.MEDICAL_DISCLAIMER)),
                     @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Validation error",
-                            content = @Content(schema = @Schema(implementation = ErrorResponse.class)),
+                            content = @Content(schema = @Schema(implementation = ApiResult.class)),
                             headers = @Header(name = MedicalDisclaimerFilter.DISCLAIMER_HEADER, description = ApiResult.MEDICAL_DISCLAIMER)),
                     @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "502", description = "NLP provider unavailable",
-                            content = @Content(schema = @Schema(implementation = ErrorResponse.class)),
+                            content = @Content(schema = @Schema(implementation = ApiResult.class)),
                             headers = @Header(name = MedicalDisclaimerFilter.DISCLAIMER_HEADER, description = ApiResult.MEDICAL_DISCLAIMER)),
                     @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Unexpected server error",
-                            content = @Content(schema = @Schema(implementation = ErrorResponse.class)),
+                            content = @Content(schema = @Schema(implementation = ApiResult.class)),
                             headers = @Header(name = MedicalDisclaimerFilter.DISCLAIMER_HEADER, description = ApiResult.MEDICAL_DISCLAIMER))
             }
     )
-    public ApiResult<EntityExtractionResponse> entities(@Valid @RequestBody ClinicalNoteRequest request) {
-        long start = System.currentTimeMillis();
+    public ResponseEntity<ApiResult<EntityExtractionResponse>> entities(@Valid @RequestBody ClinicalNoteRequest request, HttpServletRequest servletRequest) {
         log.info("Received entity extraction request at /api/nlp/entities");
         EntityExtractionResponse response = medicalNlpService.extractEntities(request);
-        log.info("Completed entity extraction in {} ms", System.currentTimeMillis() - start);
-        return ApiResult.fromPayload(response, start);
+        log.info("Completed entity extraction for /api/nlp/entities");
+        ApiResult<EntityExtractionResponse> body = ApiResult.success(200, servletRequest.getRequestURI(), response);
+        return ResponseEntity.ok(body);
     }
 
     @PostMapping("/summarize")
@@ -115,25 +118,25 @@ public class MedicalNlpController {
             ),
             responses = {
                     @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Note summarized",
-                            content = @Content(schema = @Schema(implementation = SummaryResponse.class)),
+                            content = @Content(schema = @Schema(implementation = ApiResult.class)),
                             headers = @Header(name = MedicalDisclaimerFilter.DISCLAIMER_HEADER, description = ApiResult.MEDICAL_DISCLAIMER)),
                     @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Validation error",
-                            content = @Content(schema = @Schema(implementation = ErrorResponse.class)),
+                            content = @Content(schema = @Schema(implementation = ApiResult.class)),
                             headers = @Header(name = MedicalDisclaimerFilter.DISCLAIMER_HEADER, description = ApiResult.MEDICAL_DISCLAIMER)),
                     @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "502", description = "NLP provider unavailable",
-                            content = @Content(schema = @Schema(implementation = ErrorResponse.class)),
+                            content = @Content(schema = @Schema(implementation = ApiResult.class)),
                             headers = @Header(name = MedicalDisclaimerFilter.DISCLAIMER_HEADER, description = ApiResult.MEDICAL_DISCLAIMER)),
                     @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Unexpected server error",
-                            content = @Content(schema = @Schema(implementation = ErrorResponse.class)),
+                            content = @Content(schema = @Schema(implementation = ApiResult.class)),
                             headers = @Header(name = MedicalDisclaimerFilter.DISCLAIMER_HEADER, description = ApiResult.MEDICAL_DISCLAIMER))
             }
     )
-    public ApiResult<SummaryResponse> summarize(@Valid @RequestBody ClinicalNoteRequest request) {
-        long start = System.currentTimeMillis();
+    public ResponseEntity<ApiResult<SummaryResponse>> summarize(@Valid @RequestBody ClinicalNoteRequest request, HttpServletRequest servletRequest) {
         log.info("Received summarization request at /api/nlp/summarize");
         SummaryResponse response = medicalNlpService.summarize(request);
-        log.info("Completed summarization in {} ms", System.currentTimeMillis() - start);
-        return ApiResult.fromPayload(response, start);
+        log.info("Completed summarization for /api/nlp/summarize");
+        ApiResult<SummaryResponse> body = ApiResult.success(200, servletRequest.getRequestURI(), response);
+        return ResponseEntity.ok(body);
     }
 
     @PostMapping("/keywords")
@@ -149,24 +152,24 @@ public class MedicalNlpController {
             ),
             responses = {
                     @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Keywords extracted",
-                            content = @Content(schema = @Schema(implementation = KeywordResponse.class)),
+                            content = @Content(schema = @Schema(implementation = ApiResult.class)),
                             headers = @Header(name = MedicalDisclaimerFilter.DISCLAIMER_HEADER, description = ApiResult.MEDICAL_DISCLAIMER)),
                     @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Validation error",
-                            content = @Content(schema = @Schema(implementation = ErrorResponse.class)),
+                            content = @Content(schema = @Schema(implementation = ApiResult.class)),
                             headers = @Header(name = MedicalDisclaimerFilter.DISCLAIMER_HEADER, description = ApiResult.MEDICAL_DISCLAIMER)),
                     @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "502", description = "NLP provider unavailable",
-                            content = @Content(schema = @Schema(implementation = ErrorResponse.class)),
+                            content = @Content(schema = @Schema(implementation = ApiResult.class)),
                             headers = @Header(name = MedicalDisclaimerFilter.DISCLAIMER_HEADER, description = ApiResult.MEDICAL_DISCLAIMER)),
                     @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Unexpected server error",
-                            content = @Content(schema = @Schema(implementation = ErrorResponse.class)),
+                            content = @Content(schema = @Schema(implementation = ApiResult.class)),
                             headers = @Header(name = MedicalDisclaimerFilter.DISCLAIMER_HEADER, description = ApiResult.MEDICAL_DISCLAIMER))
             }
     )
-    public ApiResult<KeywordResponse> keywords(@Valid @RequestBody ClinicalNoteRequest request) {
-        long start = System.currentTimeMillis();
+    public ResponseEntity<ApiResult<KeywordResponse>> keywords(@Valid @RequestBody ClinicalNoteRequest request, HttpServletRequest servletRequest) {
         log.info("Received keyword extraction request at /api/nlp/keywords");
         KeywordResponse response = medicalNlpService.keywords(request);
-        log.info("Completed keyword extraction in {} ms", System.currentTimeMillis() - start);
-        return ApiResult.fromPayload(response, start);
+        log.info("Completed keyword extraction for /api/nlp/keywords");
+        ApiResult<KeywordResponse> body = ApiResult.success(200, servletRequest.getRequestURI(), response);
+        return ResponseEntity.ok(body);
     }
 }
