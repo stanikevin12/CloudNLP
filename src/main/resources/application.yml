@@ -1,0 +1,27 @@
+spring:
+  application:
+    name: patient
+  datasource:
+    url: jdbc:h2:mem:testdb
+    driverClassName: org.h2.Driver
+    username: sa
+    password: ""
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: update
+  h2:
+    console:
+      enabled: true
+      path: /h2
+
+server:
+  port: 8085
+
+nlpcloud:
+  # Required: export NLP_CLOUD_API_KEY and NLP_CLOUD_MODEL in your environment for production use.
+  api-key: ${NLP_CLOUD_API_KEY:***redacted***}
+  model: ${NLP_CLOUD_MODEL:bart-large-mnli-yahoo-answers}
+  base-url: ${NLP_CLOUD_BASE_URL:https://api.nlpcloud.io/v1}
+  timeout: ${NLP_CLOUD_TIMEOUT:5s}
+  max-retries: ${NLP_CLOUD_MAX_RETRIES:2}

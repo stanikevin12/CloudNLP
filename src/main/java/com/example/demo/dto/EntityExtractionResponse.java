@@ -1,7 +1,10 @@
 package com.example.demo.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
 import java.util.List;
 
+@Schema(description = "Entity extraction output")
 public class EntityExtractionResponse {
     private List<Entity> entities;
 

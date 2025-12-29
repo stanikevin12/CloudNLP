@@ -1,31 +1,33 @@
 package com.example.demo.service;
 
-
+import com.example.demo.config.NlpCloudProperties;
 import com.example.demo.dto.ClassificationRequest;
 import com.example.demo.dto.ClassificationResponse;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.*;
+import com.example.demo.exception.UpstreamServiceException;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
+import reactor.core.publisher.Mono;
+import reactor.util.retry.Retry;
 
+import java.io.IOException;
+import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.TimeoutException;
 
 @Service
 public class NlpCloudService {
 
-    @Value("${nlpcloud.api.key}")
-    private String apiKey;
+    private final WebClient nlpCloudWebClient;
+    private final NlpCloudProperties properties;
 
-    @Value("${nlpcloud.model}")
-    private String model;
-
-    private final RestTemplate restTemplate = new RestTemplate();
-    private final ObjectMapper mapper = new ObjectMapper();
+    public NlpCloudService(WebClient nlpCloudWebClient, NlpCloudProperties properties) {
+        this.nlpCloudWebClient = nlpCloudWebClient;
+        this.properties = properties;
+    }
 
     public ClassificationResponse classify(String text) {
-
-        String url = "https://api.nlpcloud.io/v1/" + model + "/classification";
 
         ClassificationRequest requestBody = new ClassificationRequest(
                 text,
@@ -33,29 +35,48 @@ public class NlpCloudService {
                 true
         );
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.set("Authorization", "Token " + apiKey);
+        Mono<ClassificationResponse> responseMono = nlpCloudWebClient.post()
+                .uri("/classification")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(requestBody)
+                .retrieve()
+                .bodyToMono(ClassificationResponse.class)
+                .timeout(properties.getTimeout())
+                .retryWhen(buildRetrySpec())
+                .onErrorMap(this::mapUpstreamError);
 
-        HttpEntity<ClassificationRequest> entity =
-                new HttpEntity<>(requestBody, headers);
+        return responseMono.block();
+    }
 
-        // 👇 Receive RAW STRING (content-type safe)
-        ResponseEntity<String> response =
-                restTemplate.exchange(
-                        url,
-                        HttpMethod.POST,
-                        entity,
-                        String.class
-                );
+    private Retry buildRetrySpec() {
+        return Retry.backoff(properties.getMaxRetries(), Duration.ofMillis(300))
+                .filter(this::isRetryable)
+                .onRetryExhaustedThrow((spec, signal) ->
+                        new UpstreamServiceException("Upstream NLP service did not respond after retries", signal.failure()));
+    }
 
-        try {
-            return mapper.readValue(
-                    response.getBody(),
-                    ClassificationResponse.class
-            );
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to parse NLP Cloud response", e);
+    private boolean isRetryable(Throwable throwable) {
+        if (throwable instanceof TimeoutException || throwable instanceof IOException) {
+            return true;
         }
+        if (throwable instanceof WebClientResponseException responseException) {
+            return responseException.getStatusCode().is5xxServerError();
+        }
+        return false;
+    }
+
+    private Throwable mapUpstreamError(Throwable throwable) {
+        if (throwable instanceof UpstreamServiceException) {
+            return throwable;
+        }
+        if (throwable instanceof WebClientResponseException responseException) {
+            return new UpstreamServiceException(
+                    "Upstream service responded with status " + responseException.getStatusCode().value(),
+                    responseException);
+        }
+        if (throwable instanceof TimeoutException) {
+            return new UpstreamServiceException("Timed out calling upstream NLP service", throwable);
+        }
+        return new UpstreamServiceException("Failed to reach upstream NLP service", throwable);
     }
 }

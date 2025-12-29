@@ -1,32 +1,34 @@
 package com.example.demo.service;
 
+import com.example.demo.config.NlpCloudProperties;
 import com.example.demo.dto.*;
 import com.example.demo.exception.UpstreamServiceException;
 import com.example.demo.mapper.NlpCloudMapper;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.*;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestClientException;
-import org.springframework.web.client.RestClientResponseException;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
+import reactor.core.publisher.Mono;
+import reactor.util.retry.Retry;
 
-import java.util.*;
+import java.io.IOException;
+import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 
 @Service
 public class MedicalNlpService {
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final WebClient nlpCloudWebClient;
     private final NlpCloudMapper mapper;
+    private final NlpCloudProperties properties;
 
-    @Value("${nlpcloud.api.key}")
-    private String apiKey;
-
-    @Value("${nlpcloud.model}")
-    private String model;
-
-    public MedicalNlpService(NlpCloudMapper mapper) {
+    public MedicalNlpService(WebClient nlpCloudWebClient, NlpCloudMapper mapper, NlpCloudProperties properties) {
+        this.nlpCloudWebClient = nlpCloudWebClient;
         this.mapper = mapper;
+        this.properties = properties;
     }
 
     public GrammarResponse checkGrammar(ClinicalNoteRequest request) {
@@ -48,36 +50,54 @@ public class MedicalNlpService {
     private <T> T postForResponse(String path,
                                   ClinicalNoteRequest request,
                                   Function<String, T> mapperFunction) {
-        String url = "https://api.nlpcloud.io/v1/" + model + path;
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.set("Authorization", "Token " + apiKey);
-
         Map<String, String> payload = new HashMap<>();
         payload.put("text", request.getNote());
         if (request.getPatientContext() != null && !request.getPatientContext().isEmpty()) {
             payload.put("context", request.getPatientContext());
         }
 
-        HttpEntity<Map<String, String>> entity = new HttpEntity<>(payload, headers);
+        Mono<String> responseMono = nlpCloudWebClient.post()
+                .uri(path)
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(payload)
+                .retrieve()
+                .bodyToMono(String.class)
+                .timeout(properties.getTimeout())
+                .retryWhen(buildRetrySpec())
+                .onErrorMap(this::mapUpstreamError);
 
-        try {
-            ResponseEntity<String> response = restTemplate.exchange(
-                    url,
-                    HttpMethod.POST,
-                    entity,
-                    String.class
-            );
-            if (response.getBody() == null) {
-                throw new UpstreamServiceException("Upstream NLP service returned an empty response");
-            }
-            return mapperFunction.apply(response.getBody());
-        } catch (RestClientResponseException e) {
-            throw new UpstreamServiceException("Upstream service responded with status " + e.getStatusCode().value(), e);
-        } catch (RestClientException e) {
-            throw new UpstreamServiceException("Failed to reach upstream NLP service", e);
-        } catch (IllegalArgumentException e) {
-            throw new UpstreamServiceException("Unable to parse upstream NLP response", e);
+        return mapperFunction.apply(responseMono.block());
+    }
+
+    private Retry buildRetrySpec() {
+        return Retry.backoff(properties.getMaxRetries(), Duration.ofMillis(300))
+                .filter(this::isRetryable)
+                .onRetryExhaustedThrow((spec, signal) ->
+                        new UpstreamServiceException("Upstream NLP service did not respond after retries", signal.failure()));
+    }
+
+    private boolean isRetryable(Throwable throwable) {
+        if (throwable instanceof TimeoutException || throwable instanceof IOException) {
+            return true;
         }
+        if (throwable instanceof WebClientResponseException responseException) {
+            return responseException.getStatusCode().is5xxServerError();
+        }
+        return false;
+    }
+
+    private Throwable mapUpstreamError(Throwable throwable) {
+        if (throwable instanceof UpstreamServiceException) {
+            return throwable;
+        }
+        if (throwable instanceof WebClientResponseException responseException) {
+            return new UpstreamServiceException(
+                    "Upstream service responded with status " + responseException.getStatusCode().value(),
+                    responseException);
+        }
+        if (throwable instanceof TimeoutException) {
+            return new UpstreamServiceException("Timed out calling upstream NLP service", throwable);
+        }
+        return new UpstreamServiceException("Failed to reach upstream NLP service", throwable);
     }
 }
