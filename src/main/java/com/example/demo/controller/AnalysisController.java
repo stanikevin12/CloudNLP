@@ -1,10 +1,14 @@
 package com.example.demo.controller;
 
-import com.example.demo.dto.ApiResponse;
+import com.example.demo.dto.ApiResult;
 import com.example.demo.dto.ClassificationResponse;
+import com.example.demo.dto.ErrorResponse;
 import com.example.demo.service.NlpCloudService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.NotBlank;
 import org.springframework.stereotype.Controller;
@@ -37,13 +41,19 @@ public class AnalysisController {
             description = "Performs zero-shot classification for UI form submissions.",
             parameters = @Parameter(name = "text", description = "Text to classify", required = true, example = "SpaceX launched a new rocket"),
             responses = {
-                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Classification succeeded"),
-                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Validation error")
+                    @ApiResponse(responseCode = "200", description = "Classification succeeded",
+                            content = @Content(schema = @Schema(implementation = ClassificationResponse.class))),
+                    @ApiResponse(responseCode = "400", description = "Validation error",
+                            content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+                    @ApiResponse(responseCode = "502", description = "NLP provider unavailable",
+                            content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+                    @ApiResponse(responseCode = "500", description = "Unexpected server error",
+                            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
             }
     )
-    public ApiResponse<ClassificationResponse> analyze(@RequestParam @NotBlank(message = "Text is required") String text) {
+    public ApiResult<ClassificationResponse> analyze(@RequestParam @NotBlank(message = "Text is required") String text) {
         long start = System.currentTimeMillis();
         ClassificationResponse response = service.classify(text);
-        return ApiResponse.fromPayload(response, start);
+        return ApiResult.fromPayload(response, start);
     }
 }

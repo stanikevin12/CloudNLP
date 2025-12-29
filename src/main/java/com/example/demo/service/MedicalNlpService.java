@@ -108,7 +108,7 @@ public class MedicalNlpService {
         }
         if (throwable instanceof RestClientResponseException responseException) {
             return new UpstreamServiceException(
-                    "Upstream service responded with status " + responseException.getStatusCode(),
+                    "NLP service returned an unexpected response",
                     responseException);
         }
         if (throwable instanceof TimeoutException || throwable instanceof ResourceAccessException) {

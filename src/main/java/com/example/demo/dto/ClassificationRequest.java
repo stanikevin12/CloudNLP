@@ -3,12 +3,14 @@ package com.example.demo.dto;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.Size;
 
 import java.util.List;
 
 @Schema(description = "Request body for text classification")
 public class ClassificationRequest {
     @NotBlank(message = "Text is required for classification")
+    @Size(max = 5000, message = "Text must be 5,000 characters or fewer")
     @Schema(description = "Free text to classify", example = "The rover touched down on Mars this morning")
     private String text;
 
