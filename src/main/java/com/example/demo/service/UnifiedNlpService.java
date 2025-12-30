@@ -22,7 +22,6 @@ import org.springframework.web.client.RestTemplate;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -49,7 +48,6 @@ public class UnifiedNlpService {
     public GrammarResponse checkGrammar(ClinicalNoteRequest request) {
         String prompt = grammarPrompt(request.getNote(), request.getPatientContext());
         String payload = callSummarization(prompt);
-        // Summarization endpoint returns a single summary_text field, which we reuse as the corrected text.
         return new GrammarResponse(mapper.readSummaryText(payload), Collections.emptyList());
     }
 
@@ -66,25 +64,14 @@ public class UnifiedNlpService {
     }
 
     public EntityExtractionResponse extractEntities(ClinicalNoteRequest request) {
-        Map<String, String> payload = new HashMap<>();
-        payload.put("text", request.getNote());
-        if (request.getPatientContext() != null && !request.getPatientContext().isBlank()) {
-            payload.put("context", request.getPatientContext());
-        }
-
-        String responseBody = executeWithRetry(entitiesPath(), () -> {
-            HttpEntity<Map<String, String>> requestEntity = new HttpEntity<>(payload, authorizationHeaders());
-            ResponseEntity<String> response = nlpCloudRestTemplate.postForEntity(entitiesPath(), requestEntity, String.class);
-            return Objects.requireNonNullElse(response.getBody(), "");
-        });
-
+        String prompt = entityPrompt(request.getNote(), request.getPatientContext());
+        String responseBody = callSummarization(prompt);
         return mapper.toEntityExtractionResponse(responseBody);
     }
 
     private String callSummarization(String text) {
         Map<String, String> payload = Map.of("text", text);
 
-        // All non-entity NLP tasks are fulfilled via prompt engineering on the summarization endpoint to avoid unsupported routes.
         return executeWithRetry(summarizationPath(), () -> {
             HttpEntity<Map<String, String>> requestEntity = new HttpEntity<>(payload, authorizationHeaders());
             ResponseEntity<String> response = nlpCloudRestTemplate.postForEntity(summarizationPath(), requestEntity, String.class);
@@ -162,15 +149,14 @@ public class UnifiedNlpService {
         if (model == null || model.isBlank()) {
             throw new UpstreamServiceException("NLP Cloud summarization model is missing. Please configure 'nlpcloud.summarization-model'.");
         }
-        return "/" + model + "/summarization";
-    }
-
-    private String entitiesPath() {
-        String model = sanitize(properties.getEntitiesModel());
-        if (model == null || model.isBlank()) {
-            throw new UpstreamServiceException("NLP Cloud entity extraction model is missing. Please configure 'nlpcloud.entities-model'.");
+        String endpoint = sanitize(properties.getSummarizationEndpoint());
+        if (endpoint == null || endpoint.isBlank()) {
+            throw new UpstreamServiceException("NLP Cloud summarization endpoint is missing. Please configure 'nlpcloud.summarization-endpoint'.");
         }
-        return "/" + model + "/entities";
+        if (!endpoint.startsWith("/")) {
+            endpoint = "/" + endpoint;
+        }
+        return "/" + model + endpoint;
     }
 
     private String sanitize(String value) {
@@ -180,6 +166,16 @@ public class UnifiedNlpService {
     private String grammarPrompt(String note, String context) {
         StringBuilder builder = new StringBuilder();
         builder.append("You are a medical writing assistant. Correct grammar, spelling, and clarity in the following note. Return only the corrected text without explanations.\n\n");
+        if (context != null && !context.isBlank()) {
+            builder.append("Clinical context: ").append(context.trim()).append("\n\n");
+        }
+        builder.append("Note: ").append(note);
+        return builder.toString();
+    }
+
+    private String entityPrompt(String note, String context) {
+        StringBuilder builder = new StringBuilder();
+        builder.append("Extract medical entities from the note and respond as JSON with an 'entities' array where each object contains entity, text, start, end, and confidence fields.\n\n");
         if (context != null && !context.isBlank()) {
             builder.append("Clinical context: ").append(context.trim()).append("\n\n");
         }

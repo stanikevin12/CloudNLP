@@ -44,8 +44,15 @@ public class NlpCloudMapper {
 
     public EntityExtractionResponse toEntityExtractionResponse(String payload) {
         JsonNode root = parse(payload);
+        JsonNode entitiesNode = root.path("entities");
+
+        if (entitiesNode.isMissingNode() || !entitiesNode.isArray() || entitiesNode.isEmpty()) {
+            String summaryText = root.path("summary_text").asText(root.path("summary").asText(""));
+            entitiesNode = tryParseEntities(summaryText);
+        }
+
         List<Entity> entities = new ArrayList<>();
-        for (JsonNode node : root.path("entities")) {
+        for (JsonNode node : entitiesNode) {
             entities.add(new Entity(
                     node.path("entity").asText(node.path("type").asText("")),
                     node.path("text").asText(""),
@@ -55,6 +62,24 @@ public class NlpCloudMapper {
             ));
         }
         return new EntityExtractionResponse(entities);
+    }
+
+    private JsonNode tryParseEntities(String summaryText) {
+        if (summaryText == null || summaryText.isBlank()) {
+            return objectMapper.createArrayNode();
+        }
+        try {
+            JsonNode parsed = objectMapper.readTree(summaryText);
+            if (parsed.has("entities")) {
+                return parsed.path("entities");
+            }
+            if (parsed.isArray()) {
+                return parsed;
+            }
+        } catch (IOException ignored) {
+            // Fall through to empty array node
+        }
+        return objectMapper.createArrayNode();
     }
 
     public SummaryResponse toSummaryResponse(String payload) {

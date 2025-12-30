@@ -2,16 +2,16 @@ package com.example.demo.controller;
 
 import com.example.demo.dto.ClinicalNoteRequest;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import okhttp3.mockwebserver.MockResponse;
-import okhttp3.mockwebserver.MockWebServer;
-import okhttp3.mockwebserver.RecordedRequest;
+import com.github.tomakehurst.wiremock.WireMockServer;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
@@ -20,26 +20,20 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
 import java.io.IOException;
-import java.util.concurrent.TimeUnit;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.*;
+import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.options;
+import static com.github.tomakehurst.wiremock.stubbing.Scenario.STARTED;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@ActiveProfiles("test")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class MedicalNlpResilienceIntegrationTest {
 
-    private static final MockWebServer mockWebServer;
-
-    static {
-        mockWebServer = new MockWebServer();
-        try {
-            mockWebServer.start();
-        } catch (IOException e) {
-            throw new IllegalStateException("Failed to start MockWebServer", e);
-        }
-    }
+    private static WireMockServer wireMockServer;
 
     @Autowired
     private WebApplicationContext context;
@@ -51,31 +45,44 @@ class MedicalNlpResilienceIntegrationTest {
 
     @DynamicPropertySource
     static void registerProps(DynamicPropertyRegistry registry) {
-        registry.add("nlpcloud.api-key", () -> "test-key");
-        registry.add("nlpcloud.summarization-model", () -> "bart-large-cnn");
-        registry.add("nlpcloud.entities-model", () -> "mock-entities-model");
-        registry.add("nlpcloud.classification-model", () -> "mock-classification-model");
-        registry.add("nlpcloud.timeout", () -> "250ms");
-        registry.add("nlpcloud.max-retries", () -> "2");
-        registry.add("nlpcloud.base-url", () -> mockWebServer.url("/v1").toString());
+        WireMockServer server = ensureWireMockServer();
+        registry.add("nlpcloud.base-url", server::baseUrl);
     }
 
     @BeforeAll
     void setup() {
+        ensureWireMockServer();
         mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
     }
 
+    @AfterEach
+    void resetWireMock() {
+        reset();
+    }
+
     @AfterAll
-    void tearDown() throws IOException {
-        mockWebServer.shutdown();
+    void tearDown() {
+        if (wireMockServer != null) {
+            wireMockServer.stop();
+        }
+    }
+
+    private static WireMockServer ensureWireMockServer() {
+        if (wireMockServer == null) {
+            wireMockServer = new WireMockServer(options().dynamicPort());
+            wireMockServer.start();
+            configureFor(wireMockServer.port());
+        }
+        return wireMockServer;
     }
 
     @Test
     void grammarEndpointReturnsControlledErrorOnTimeout() throws Exception {
-        mockWebServer.enqueue(new MockResponse()
-                .setBody("{}")
-                .setBodyDelay(1, TimeUnit.SECONDS)
-                .setHeader("Content-Type", "application/json"));
+        wireMockServer.stubFor(post(urlEqualTo("/v1/bart-large-cnn/summarization"))
+                .willReturn(aResponse()
+                        .withFixedDelay(1000)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("{}")));
 
         ClinicalNoteRequest request = new ClinicalNoteRequest(
                 "Patient note experiencing slow upstream response for testing.", null);
@@ -87,16 +94,16 @@ class MedicalNlpResilienceIntegrationTest {
                 .andExpect(jsonPath("$.error.message").value("Unable to process NLP request at this time. Please try again later."))
                 .andExpect(jsonPath("$.medicalDisclaimer").value("This tool does not provide diagnosis."));
 
-        RecordedRequest recordedRequest = mockWebServer.takeRequest();
-        assertThat(recordedRequest.getPath()).isEqualTo("/v1/bart-large-cnn/summarization");
+        verify(postRequestedFor(urlEqualTo("/v1/bart-large-cnn/summarization")));
     }
 
     @Test
     void grammarEndpointReturnsControlledErrorOn5xx() throws Exception {
-        mockWebServer.enqueue(new MockResponse()
-                .setResponseCode(502)
-                .setBody("{\"error\":\"temporary\"}")
-                .setHeader("Content-Type", "application/json"));
+        wireMockServer.stubFor(post(urlEqualTo("/v1/bart-large-cnn/summarization"))
+                .willReturn(aResponse()
+                        .withStatus(502)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("{\"error\":\"temporary\"}")));
 
         ClinicalNoteRequest request = new ClinicalNoteRequest(
                 "Patient note that should trigger upstream failure handling.", null);
@@ -108,15 +115,25 @@ class MedicalNlpResilienceIntegrationTest {
                 .andExpect(jsonPath("$.error.message").value("Unable to process NLP request at this time. Please try again later."))
                 .andExpect(jsonPath("$.medicalDisclaimer").value("This tool does not provide diagnosis."));
 
-        RecordedRequest recordedRequest = mockWebServer.takeRequest();
-        assertThat(recordedRequest.getPath()).isEqualTo("/v1/bart-large-cnn/summarization");
+        verify(postRequestedFor(urlEqualTo("/v1/bart-large-cnn/summarization")));
     }
 
     @Test
     void grammarEndpointRetriesAndFailsCleanlyAfterTwoAttempts() throws Exception {
-        mockWebServer.enqueue(new MockResponse().setResponseCode(500));
-        mockWebServer.enqueue(new MockResponse().setResponseCode(500));
-        mockWebServer.enqueue(new MockResponse().setResponseCode(500));
+        wireMockServer.stubFor(post(urlEqualTo("/v1/bart-large-cnn/summarization"))
+                .inScenario("retry")
+                .whenScenarioStateIs(STARTED)
+                .willReturn(aResponse().withStatus(500))
+                .willSetStateTo("second"));
+        wireMockServer.stubFor(post(urlEqualTo("/v1/bart-large-cnn/summarization"))
+                .inScenario("retry")
+                .whenScenarioStateIs("second")
+                .willReturn(aResponse().withStatus(500))
+                .willSetStateTo("third"));
+        wireMockServer.stubFor(post(urlEqualTo("/v1/bart-large-cnn/summarization"))
+                .inScenario("retry")
+                .whenScenarioStateIs("third")
+                .willReturn(aResponse().withStatus(500)));
 
         ClinicalNoteRequest request = new ClinicalNoteRequest(
                 "Patient note used to verify retry logic with sufficient length.", null);
@@ -128,13 +145,7 @@ class MedicalNlpResilienceIntegrationTest {
                 .andExpect(jsonPath("$.error.message").value("Unable to process NLP request at this time. Please try again later."))
                 .andExpect(jsonPath("$.medicalDisclaimer").value("This tool does not provide diagnosis."));
 
-        RecordedRequest first = mockWebServer.takeRequest();
-        RecordedRequest second = mockWebServer.takeRequest();
-        RecordedRequest third = mockWebServer.takeRequest();
-
-        assertThat(first.getPath()).isEqualTo("/v1/bart-large-cnn/summarization");
-        assertThat(second.getPath()).isEqualTo("/v1/bart-large-cnn/summarization");
-        assertThat(third.getPath()).isEqualTo("/v1/bart-large-cnn/summarization");
+        assertThat(wireMockServer.getAllServeEvents()).hasSize(3);
+        verify(3, postRequestedFor(urlEqualTo("/v1/bart-large-cnn/summarization")));
     }
 }
-

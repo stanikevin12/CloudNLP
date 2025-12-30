@@ -16,9 +16,8 @@ public class NlpCloudClientConfig {
     public RestTemplate nlpCloudRestTemplate(NlpCloudProperties properties, RestTemplateBuilder builder) {
         String baseUrl = normalizeBaseUrl(properties.getBaseUrl());
 
-        validateRequiredModels(properties);
-        log.info("Configuring NLP Cloud client with base URL '{}' and summarization model '{}' plus entities model '{}'", baseUrl,
-                safeValue(properties.getSummarizationModel()), safeValue(properties.getEntitiesModel()));
+        log.info("Configuring NLP Cloud client with base URL '{}' and summarization model '{}'", baseUrl,
+                safeValue(properties.getSummarizationModel()));
 
         return builder
                 .rootUri(baseUrl)
@@ -41,18 +40,7 @@ public class NlpCloudClientConfig {
         return sanitized;
     }
 
-    private void validateRequiredModels(NlpCloudProperties properties) {
-        if (isBlank(properties.getSummarizationModel()) || isBlank(properties.getEntitiesModel())
-                || isBlank(properties.getClassificationModel())) {
-            throw new IllegalStateException("NLP Cloud models must be configured for summarization, entities, and classification.");
-        }
-    }
-
     private String safeValue(String value) {
         return value == null ? "" : value.trim();
-    }
-
-    private boolean isBlank(String value) {
-        return value == null || value.trim().isEmpty();
     }
 }
