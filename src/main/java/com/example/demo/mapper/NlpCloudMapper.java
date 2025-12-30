@@ -66,6 +66,11 @@ public class NlpCloudMapper {
         return new SummaryResponse(summary, keyFindings);
     }
 
+    public String readSummaryText(String payload) {
+        JsonNode root = parse(payload);
+        return root.path("summary_text").asText(root.path("summary").asText(""));
+    }
+
     public KeywordResponse toKeywordResponse(String payload) {
         JsonNode root = parse(payload);
         List<String> keywords = StreamSupport.stream(root.path("keywords").spliterator(), false)

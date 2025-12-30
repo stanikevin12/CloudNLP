@@ -1,6 +1,5 @@
 package com.example.demo.config;
 
-import com.example.demo.config.model.NlpTask;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.time.Duration;
@@ -11,8 +10,10 @@ public class NlpCloudProperties {
     private String apiKey;
     private String baseUrl = "https://api.nlpcloud.io/v1";
     private Duration timeout = Duration.ofSeconds(5);
-    private int maxRetries = 2;
-    private Models models = new Models();
+    private int maxRetries = 3;
+    private String summarizationModel;
+    private String entitiesModel;
+    private String classificationModel;
 
     public String getApiKey() {
         return apiKey;
@@ -46,70 +47,27 @@ public class NlpCloudProperties {
         this.maxRetries = maxRetries;
     }
 
-    public Models getModels() {
-        return models;
+    public String getSummarizationModel() {
+        return summarizationModel;
     }
 
-    public void setModels(Models models) {
-        this.models = models;
+    public void setSummarizationModel(String summarizationModel) {
+        this.summarizationModel = summarizationModel;
     }
 
-    public static class Models {
+    public String getEntitiesModel() {
+        return entitiesModel;
+    }
 
-        private String grammar;
-        private String entities;
-        private String summarize;
-        private String keywords;
-        private String classification;
+    public void setEntitiesModel(String entitiesModel) {
+        this.entitiesModel = entitiesModel;
+    }
 
-        public String getModelForTask(NlpTask task) {
-            return switch (task) {
-                case GRAMMAR -> grammar;
-                case ENTITIES -> entities;
-                case SUMMARIZE -> summarize;
-                case KEYWORDS -> keywords;
-                case CLASSIFICATION -> classification;
-            };
-        }
+    public String getClassificationModel() {
+        return classificationModel;
+    }
 
-        public String getGrammar() {
-            return grammar;
-        }
-
-        public void setGrammar(String grammar) {
-            this.grammar = grammar;
-        }
-
-        public String getEntities() {
-            return entities;
-        }
-
-        public void setEntities(String entities) {
-            this.entities = entities;
-        }
-
-        public String getSummarize() {
-            return summarize;
-        }
-
-        public void setSummarize(String summarize) {
-            this.summarize = summarize;
-        }
-
-        public String getKeywords() {
-            return keywords;
-        }
-
-        public void setKeywords(String keywords) {
-            this.keywords = keywords;
-        }
-
-        public String getClassification() {
-            return classification;
-        }
-
-        public void setClassification(String classification) {
-            this.classification = classification;
-        }
+    public void setClassificationModel(String classificationModel) {
+        this.classificationModel = classificationModel;
     }
 }

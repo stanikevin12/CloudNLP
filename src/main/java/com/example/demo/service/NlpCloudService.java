@@ -1,7 +1,6 @@
 package com.example.demo.service;
 
 import com.example.demo.config.NlpCloudProperties;
-import com.example.demo.config.model.NlpTask;
 import com.example.demo.dto.ClassificationRequest;
 import com.example.demo.dto.ClassificationResponse;
 import com.example.demo.exception.UpstreamServiceException;
@@ -46,7 +45,7 @@ public class NlpCloudService {
         HttpHeaders headers = authorizationHeaders();
         HttpEntity<ClassificationRequest> requestEntity = new HttpEntity<>(requestBody, headers);
 
-        String path = modelPath(NlpTask.CLASSIFICATION);
+        String path = classificationPath();
 
         return executeWithRetry(path, () -> {
             ResponseEntity<ClassificationResponse> response = nlpCloudRestTemplate.postForEntity(
@@ -60,7 +59,7 @@ public class NlpCloudService {
     }
 
     private <T> T executeWithRetry(String path, SupplierWithException<T> action) {
-        int attempts = Math.min(properties.getMaxRetries(), 2) + 1;
+        int attempts = Math.min(Math.max(properties.getMaxRetries(), 1), 3);
         for (int attempt = 1; attempt <= attempts; attempt++) {
             try {
                 return action.get();
@@ -96,12 +95,12 @@ public class NlpCloudService {
         return apiKey;
     }
 
-    private String modelPath(NlpTask task) {
-        String sanitizedModel = sanitize(properties.getModels().getModelForTask(task));
+    private String classificationPath() {
+        String sanitizedModel = sanitize(properties.getClassificationModel());
         if (sanitizedModel == null || sanitizedModel.isBlank()) {
-            throw new UpstreamServiceException(String.format("NLP Cloud model for %s is missing. Please configure 'nlpcloud.models.%s'.", task.endpoint(), task.endpoint()));
+            throw new UpstreamServiceException("NLP Cloud model for classification is missing. Please configure 'nlpcloud.classification-model'.");
         }
-        return "/" + sanitizedModel + "/" + task.endpoint();
+        return "/" + sanitizedModel + "/classification";
     }
 
     private String sanitize(String value) {
@@ -126,6 +125,7 @@ public class NlpCloudService {
             return upstream;
         }
         if (throwable instanceof RestClientResponseException responseException) {
+            log.error("NLP Cloud returned {} for classification. Body: {}", responseException.getStatusCode().value(), responseException.getResponseBodyAsString());
             return new UpstreamServiceException(
                     SAFE_UPSTREAM_MESSAGE,
                     responseException);
