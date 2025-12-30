@@ -80,7 +80,7 @@
         </dependency>
         <dependency>
             <groupId>org.wiremock</groupId>
-            <artifactId>wiremock-standalone</artifactId>
+            <artifactId>wiremock-jetty11</artifactId>
             <version>3.9.1</version>
             <scope>test</scope>
         </dependency>
