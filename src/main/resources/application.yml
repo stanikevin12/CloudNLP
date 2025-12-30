@@ -25,8 +25,8 @@ nlpcloud:
   timeout: ${NLP_CLOUD_TIMEOUT:5s}
   max-retries: ${NLP_CLOUD_MAX_RETRIES:2}
   models:
-    grammar: ${NLP_CLOUD_GRAMMAR_MODEL:finetuned-gpt-neox-20b-grammar}
-    entities: ${NLP_CLOUD_ENTITIES_MODEL:wikineural-multilingual-ner}
-    summarize: ${NLP_CLOUD_SUMMARIZE_MODEL:t5-base-en-generate-headline}
-    keywords: ${NLP_CLOUD_KEYWORDS_MODEL:keyphrase-extraction-multilingual}
-    classification: ${NLP_CLOUD_CLASSIFICATION_MODEL:fast-gpt-j}
+    grammar: ${NLP_CLOUD_GRAMMAR_MODEL:gpt-neox-20b}
+    entities: ${NLP_CLOUD_ENTITIES_MODEL:en_core_web_lg}
+    summarize: ${NLP_CLOUD_SUMMARIZE_MODEL:bart-large-cnn}
+    keywords: ${NLP_CLOUD_KEYWORDS_MODEL:keyphrase-extraction}
+    classification: ${NLP_CLOUD_CLASSIFICATION_MODEL:bart-large-mnli-yahoo-answers}
