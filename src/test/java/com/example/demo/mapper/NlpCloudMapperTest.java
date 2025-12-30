@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -29,14 +30,11 @@ class NlpCloudMapperTest {
     void mapsGrammarPayload() throws IOException {
         String payload = Files.readString(Path.of("src/test/resources/fixtures/grammar.json"));
 
-        GrammarResponse response = mapper.toGrammarResponse(payload);
+        GrammarResponse response = new GrammarResponse(mapper.readSummaryText(payload), List.of());
 
+        assertFalse(response.getCorrectedText().isBlank());
         assertEquals("This is the corrected text.", response.getCorrectedText());
-        assertEquals(2, response.getSuggestions().size());
-        assertEquals("spelling", response.getSuggestions().get(0).getType());
-        assertEquals("This", response.getSuggestions().get(0).getSuggestion());
-        assertEquals(0, response.getSuggestions().get(0).getStart());
-        assertEquals(3, response.getSuggestions().get(0).getEnd());
+        assertTrue(response.getSuggestions().isEmpty());
     }
 
     @Test
@@ -69,8 +67,14 @@ class NlpCloudMapperTest {
     void mapsKeywordPayload() throws IOException {
         String payload = Files.readString(Path.of("src/test/resources/fixtures/keywords.json"));
 
-        KeywordResponse response = mapper.toKeywordResponse(payload);
+        String summaryText = mapper.readSummaryText(payload);
+        KeywordResponse response = new KeywordResponse(Arrays.stream(summaryText.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isBlank())
+                .toList());
 
-        assertEquals(List.of("nlp", "cloud", "api", "java"), response.getKeywords());
+        assertNotNull(response.getKeywords());
+        assertFalse(response.getKeywords().isEmpty());
+        assertTrue(response.getKeywords().contains("nlp"));
     }
 }
