@@ -1,38 +1,412 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <title>Medical Report Classification</title>
-    <script>
-        function analyze() {
-            const text = document.getElementById("report").value;
-
-            fetch("/analyze", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/x-www-form-urlencoded"
-                },
-                body: "text=" + encodeURIComponent(text)
-            })
-            .then(res => res.json())
-            .then(data => {
-                let output = "<h3>Classification Results</h3><ul>";
-                for (let i = 0; i < data.labels.length; i++) {
-                    output += `<li>${data.labels[i]}: ${(data.scores[i]*100).toFixed(2)}%</li>`;
-                }
-                output += "</ul>";
-                document.getElementById("result").innerHTML = output;
-            });
+    <meta charset="UTF-8">
+    <title>Medical NLP Demo</title>
+    <style>
+        :root {
+            --accent: #1b4965;
+            --muted: #f3f6f9;
+            --border: #d5dce3;
+            --danger: #a4161a;
         }
-    </script>
+
+        body {
+            font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+            margin: 0;
+            background: white;
+            color: #1f2933;
+            line-height: 1.6;
+        }
+
+        header {
+            background: var(--accent);
+            color: white;
+            padding: 12px 20px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        header strong {
+            font-size: 0.95rem;
+        }
+
+        main {
+            max-width: 960px;
+            margin: 32px auto;
+            padding: 0 20px 40px;
+        }
+
+        h1 {
+            margin: 0 0 8px;
+            font-size: 1.6rem;
+        }
+
+        p.lead {
+            margin: 0 0 20px;
+            color: #4a5568;
+        }
+
+        textarea, input[type="text"] {
+            width: 100%;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 1rem;
+            box-sizing: border-box;
+            background: var(--muted);
+        }
+
+        textarea {
+            min-height: 180px;
+            resize: vertical;
+        }
+
+        .field-label {
+            font-weight: 600;
+            margin: 20px 0 8px;
+            display: block;
+        }
+
+        .actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin: 20px 0;
+        }
+
+        button {
+            border: none;
+            background: var(--accent);
+            color: white;
+            padding: 10px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: transform 0.05s ease, box-shadow 0.1s ease;
+        }
+
+        button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            box-shadow: none;
+            transform: none;
+        }
+
+        #result {
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            background: #fff;
+            min-height: 120px;
+        }
+
+        .meta {
+            font-size: 0.9rem;
+            color: #56616f;
+            margin-bottom: 12px;
+        }
+
+        .error {
+            color: var(--danger);
+            font-weight: 600;
+        }
+
+        .card {
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 12px 14px;
+            margin: 8px 0;
+            background: var(--muted);
+        }
+
+        .list-inline {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding: 0;
+            margin: 0;
+            list-style: none;
+        }
+
+        .chip {
+            background: #e8f1f8;
+            color: #1b4965;
+            padding: 6px 10px;
+            border-radius: 999px;
+            font-weight: 600;
+            border: 1px solid #d5e5f3;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 8px;
+        }
+
+        th, td {
+            border: 1px solid var(--border);
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background: #f0f4f8;
+        }
+
+        .disclaimer-note {
+            font-size: 0.9rem;
+            color: #253858;
+            margin-top: 16px;
+        }
+    </style>
 </head>
 <body>
+<header>
+    <span aria-hidden="true">⚕️</span>
+    <div>
+        <strong>Academic Demo — Not for clinical use</strong>
+        <div style="font-size: 0.9rem; opacity: 0.9;">This tool does not provide diagnosis or medical advice.</div>
+    </div>
+</header>
 
-<h2>Patient Report Classification</h2>
+<main>
+    <section>
+        <h1>Medical NLP Playground</h1>
+        <p class="lead">Paste a de-identified clinical note to explore entity extraction, grammar correction, summarization, and keyword discovery. Inputs are sent directly to the API and are not stored.</p>
 
-<textarea id="report" rows="8" cols="80"></textarea><br>
-<button onclick="analyze()">Analyze</button>
+        <label class="field-label" for="note">Clinical note</label>
+        <textarea id="note" name="note" placeholder="Paste your de-identified clinical note here..."></textarea>
 
-<div id="result"></div>
+        <label class="field-label" for="context">Optional context (vitals, history, etc.)</label>
+        <input type="text" id="context" name="context" placeholder="Add brief context to guide the model" />
 
+        <div class="actions">
+            <button type="button" onclick="submitTask('entities')">Extract entities</button>
+            <button type="button" onclick="submitTask('grammar')">Check grammar</button>
+            <button type="button" onclick="submitTask('summary')">Summarize</button>
+            <button type="button" onclick="submitTask('keywords')">Find keywords</button>
+        </div>
+    </section>
+
+    <section aria-live="polite">
+        <div id="status" class="meta">Select an action to view results.</div>
+        <div id="result"></div>
+        <div class="disclaimer-note" id="disclaimer">This tool does not provide diagnosis.</div>
+    </section>
+</main>
+
+<script>
+    const endpoints = {
+        entities: '/api/nlp/entities',
+        grammar: '/api/nlp/grammar',
+        summary: '/api/nlp/summarize',
+        keywords: '/api/nlp/keywords'
+    };
+
+    const actionLabels = {
+        entities: 'Extracting entities',
+        grammar: 'Checking grammar',
+        summary: 'Summarizing note',
+        keywords: 'Finding keywords'
+    };
+
+    function sanitize(text) {
+        const div = document.createElement('div');
+        div.textContent = text ?? '';
+        return div.innerHTML;
+    }
+
+    function buildPayload(note, context) {
+        const payload = { note: note };
+        if (context) {
+            payload.patientContext = context;
+        }
+        return payload;
+    }
+
+    function renderProcessing(type) {
+        const status = document.getElementById('status');
+        const result = document.getElementById('result');
+        const label = actionLabels[type] || 'Processing';
+        status.textContent = label + '…';
+        result.innerHTML = '<div class="meta">Processing…</div>';
+    }
+
+    function formatConfidence(confidence) {
+        if (typeof confidence === 'number') {
+            return sanitize(confidence.toFixed(2));
+        }
+        return sanitize(confidence ?? '—');
+    }
+
+    async function submitTask(type) {
+        const note = document.getElementById('note').value.trim();
+        const context = document.getElementById('context').value.trim();
+        const status = document.getElementById('status');
+        const result = document.getElementById('result');
+
+        if (!note) {
+            status.innerHTML = '<span class="error">Clinical note is required to run this analysis.</span>';
+            result.innerHTML = '';
+            return;
+        }
+
+        const endpoint = endpoints[type];
+        if (!endpoint) {
+            status.innerHTML = '<span class="error">Unknown request.</span>';
+            return;
+        }
+
+        renderProcessing(type);
+        toggleButtons(true);
+
+        try {
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(buildPayload(note, context))
+            });
+
+            let envelope = null;
+            try {
+                envelope = await response.json();
+            } catch (_) {
+                // fall through to generic error handling below
+            }
+            renderResponse(type, envelope, response.ok);
+        } catch (err) {
+            status.innerHTML = '<span class="error">Unable to contact the service. Please try again.</span>';
+            result.innerHTML = '';
+        } finally {
+            toggleButtons(false);
+        }
+    }
+
+    function renderResponse(type, envelope, ok) {
+        const status = document.getElementById('status');
+        const result = document.getElementById('result');
+        const disclaimer = document.getElementById('disclaimer');
+
+        const message = envelope?.error?.message;
+        const disclaimerText = envelope?.medicalDisclaimer || 'This tool does not provide diagnosis.';
+        disclaimer.textContent = disclaimerText;
+
+        if (!envelope) {
+            status.innerHTML = '<span class="error">The service returned an unexpected response.</span>';
+            result.innerHTML = '';
+            return;
+        }
+
+        if (!ok || message) {
+            status.innerHTML = '<span class="error">' + sanitize(message || 'The request could not be completed.') + '</span>';
+            result.innerHTML = '';
+            return;
+        }
+
+        status.textContent = 'Completed at ' + (envelope.timestamp || '');
+
+        switch (type) {
+            case 'entities':
+                renderEntities(envelope.data);
+                break;
+            case 'grammar':
+                renderGrammar(envelope.data);
+                break;
+            case 'summary':
+                renderSummary(envelope.data);
+                break;
+            case 'keywords':
+                renderKeywords(envelope.data);
+                break;
+            default:
+                result.innerHTML = '';
+        }
+    }
+
+    function renderEntities(data) {
+        const result = document.getElementById('result');
+        const entities = data?.entities || [];
+        if (!entities.length) {
+            result.innerHTML = '<div class="meta">No entities returned.</div>';
+            return;
+        }
+
+        const rows = entities.map(e => `<tr><td>${sanitize(e.text)}</td><td>${sanitize(e.entity)}</td><td>${formatConfidence(e.confidence)}</td><td>${sanitize(e.start)}–${sanitize(e.end)}</td></tr>`).join('');
+        result.innerHTML = `
+            <div class="card">
+                <strong>Extracted entities</strong>
+                <table aria-label="Extracted entities table">
+                    <thead><tr><th>Text</th><th>Type</th><th>Confidence</th><th>Offsets</th></tr></thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>`;
+    }
+
+    function renderGrammar(data) {
+        const result = document.getElementById('result');
+        const suggestions = data?.suggestions || [];
+        const suggestionList = suggestions.length
+            ? '<ul>' + suggestions.map(s => `<li>${sanitize(s.text)} → ${sanitize(s.suggestion)} <span class="meta">(${sanitize(s.type)} @ ${sanitize(s.start)}–${sanitize(s.end)})</span></li>`).join('') + '</ul>'
+            : '<div class="meta">No suggestions returned.</div>';
+
+        result.innerHTML = `
+            <div class="card">
+                <strong>Corrected text</strong>
+                <p>${sanitize(data?.correctedText || 'No corrected text provided.')}</p>
+            </div>
+            <div class="card">
+                <strong>Suggestions</strong>
+                ${suggestionList}
+            </div>`;
+    }
+
+    function renderSummary(data) {
+        const result = document.getElementById('result');
+        const findings = data?.keyFindings || [];
+        const findingsList = findings.length
+            ? '<ul>' + findings.map(f => `<li>${sanitize(f)}</li>`).join('') + '</ul>'
+            : '<div class="meta">No key findings returned.</div>';
+
+        result.innerHTML = `
+            <div class="card">
+                <strong>Summary</strong>
+                <p>${sanitize(data?.summary || 'No summary returned.')}</p>
+            </div>
+            <div class="card">
+                <strong>Key findings</strong>
+                ${findingsList}
+            </div>`;
+    }
+
+    function renderKeywords(data) {
+        const result = document.getElementById('result');
+        const keywords = data?.keywords || [];
+        const keywordList = keywords.length
+            ? '<ul class="list-inline">' + keywords.map(k => `<li class="chip">${sanitize(k)}</li>`).join('') + '</ul>'
+            : '<div class="meta">No keywords returned.</div>';
+
+        result.innerHTML = `
+            <div class="card">
+                <strong>Keywords</strong>
+                ${keywordList}
+            </div>`;
+    }
+
+    function toggleButtons(disabled) {
+        document.querySelectorAll('button').forEach(btn => btn.disabled = disabled);
+    }
+</script>
 </body>
 </html>
