@@ -54,7 +54,11 @@ class MedicalNlpControllerIntegrationTest {
     @DynamicPropertySource
     static void registerProps(DynamicPropertyRegistry registry) {
         registry.add("nlpcloud.api-key", () -> "test-key");
-        registry.add("nlpcloud.model", () -> "mock-model");
+        registry.add("nlpcloud.models.grammar", () -> "mock-grammar-model");
+        registry.add("nlpcloud.models.entities", () -> "mock-entities-model");
+        registry.add("nlpcloud.models.summarize", () -> "mock-summarize-model");
+        registry.add("nlpcloud.models.keywords", () -> "mock-keywords-model");
+        registry.add("nlpcloud.models.classification", () -> "mock-classification-model");
         registry.add("nlpcloud.timeout", () -> "2s");
         registry.add("nlpcloud.max-retries", () -> "0");
         registry.add("nlpcloud.base-url", () -> mockWebServer.url("/v1").toString());
@@ -87,7 +91,7 @@ class MedicalNlpControllerIntegrationTest {
                 .andExpect(jsonPath("$.data.suggestions[0].type").value("spelling"));
 
         RecordedRequest recordedRequest = mockWebServer.takeRequest();
-        assertThat(recordedRequest.getPath()).contains("/grammar");
+        assertThat(recordedRequest.getPath()).isEqualTo("/v1/mock-grammar-model/grammar");
     }
 
     @Test
@@ -107,7 +111,7 @@ class MedicalNlpControllerIntegrationTest {
                 .andExpect(jsonPath("$.data.entities[1].entity").value("location"));
 
         RecordedRequest recordedRequest = mockWebServer.takeRequest();
-        assertThat(recordedRequest.getPath()).contains("/entities");
+        assertThat(recordedRequest.getPath()).isEqualTo("/v1/mock-entities-model/entities");
     }
 
     @Test
@@ -128,7 +132,7 @@ class MedicalNlpControllerIntegrationTest {
                 .andExpect(jsonPath("$.data.keyFindings[1]").value("Finding two"));
 
         RecordedRequest recordedRequest = mockWebServer.takeRequest();
-        assertThat(recordedRequest.getPath()).contains("/summarize");
+        assertThat(recordedRequest.getPath()).isEqualTo("/v1/mock-summarize-model/summarize");
     }
 
     @Test
@@ -148,7 +152,7 @@ class MedicalNlpControllerIntegrationTest {
                 .andExpect(jsonPath("$.data.keywords[0]").value("nlp"));
 
         RecordedRequest recordedRequest = mockWebServer.takeRequest();
-        assertThat(recordedRequest.getPath()).contains("/keywords");
+        assertThat(recordedRequest.getPath()).isEqualTo("/v1/mock-keywords-model/keywords");
     }
 
     @Test
@@ -167,7 +171,7 @@ class MedicalNlpControllerIntegrationTest {
                 .andExpect(jsonPath("$.data.scores[0]").value(0.83));
 
         RecordedRequest recordedRequest = mockWebServer.takeRequest();
-        assertThat(recordedRequest.getPath()).contains("/classification");
+        assertThat(recordedRequest.getPath()).isEqualTo("/v1/mock-classification-model/classification");
     }
 
     private void enqueueFixture(String path) throws IOException {

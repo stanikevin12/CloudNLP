@@ -1,6 +1,7 @@
 package com.example.demo.service;
 
 import com.example.demo.config.NlpCloudProperties;
+import com.example.demo.config.model.NlpTask;
 import com.example.demo.dto.ClassificationRequest;
 import com.example.demo.dto.ClassificationResponse;
 import com.example.demo.exception.UpstreamServiceException;
@@ -18,6 +19,7 @@ import org.springframework.web.client.RestTemplate;
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
+import java.util.Objects;
 
 @Service
 public class NlpCloudService {
@@ -41,13 +43,14 @@ public class NlpCloudService {
                 true
         );
 
-        return executeWithRetry(() -> {
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            HttpEntity<ClassificationRequest> requestEntity = new HttpEntity<>(requestBody, headers);
+        HttpHeaders headers = authorizationHeaders();
+        HttpEntity<ClassificationRequest> requestEntity = new HttpEntity<>(requestBody, headers);
 
+        String path = modelPath(NlpTask.CLASSIFICATION);
+
+        return executeWithRetry(path, () -> {
             ResponseEntity<ClassificationResponse> response = nlpCloudRestTemplate.postForEntity(
-                    "/classification",
+                    path,
                     requestEntity,
                     ClassificationResponse.class
             );
@@ -56,14 +59,14 @@ public class NlpCloudService {
         });
     }
 
-    private <T> T executeWithRetry(SupplierWithException<T> action) {
+    private <T> T executeWithRetry(String path, SupplierWithException<T> action) {
         int attempts = Math.min(properties.getMaxRetries(), 2) + 1;
         for (int attempt = 1; attempt <= attempts; attempt++) {
             try {
                 return action.get();
             } catch (Exception ex) {
                 boolean retryable = attempt < attempts && isRetryable(ex);
-                log.warn("Attempt {}/{} failed calling /classification: {}", attempt, attempts, ex.getClass().getSimpleName());
+                log.warn("Attempt {}/{} failed calling {}: {}", attempt, attempts, path, ex.getClass().getSimpleName());
                 if (!retryable) {
                     throw mapUpstreamError(ex);
                 }
@@ -76,6 +79,33 @@ public class NlpCloudService {
             }
         }
         throw new UpstreamServiceException(SAFE_UPSTREAM_MESSAGE, null);
+    }
+
+    private HttpHeaders authorizationHeaders() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set(HttpHeaders.AUTHORIZATION, "Token " + resolveApiKey());
+        return headers;
+    }
+
+    private String resolveApiKey() {
+        String apiKey = sanitize(properties.getApiKey());
+        if (apiKey == null || apiKey.isBlank() || Objects.equals(apiKey, "***redacted***")) {
+            throw new UpstreamServiceException("NLP Cloud API key is missing. Please configure 'nlpcloud.api-key'.");
+        }
+        return apiKey;
+    }
+
+    private String modelPath(NlpTask task) {
+        String sanitizedModel = sanitize(properties.getModels().getModelForTask(task));
+        if (sanitizedModel == null || sanitizedModel.isBlank()) {
+            throw new UpstreamServiceException(String.format("NLP Cloud model for %s is missing. Please configure 'nlpcloud.models.%s'.", task.endpoint(), task.endpoint()));
+        }
+        return "/" + sanitizedModel + "/" + task.endpoint();
+    }
+
+    private String sanitize(String value) {
+        return value == null ? null : value.trim();
     }
 
     private boolean isRetryable(Throwable throwable) {

@@ -1,0 +1,11 @@
+nlpcloud:
+  api-key: test-api-key
+  base-url: http://localhost
+  timeout: 1s
+  max-retries: 0
+  models:
+    grammar: test-grammar-model
+    entities: test-entities-model
+    summarize: test-summarize-model
+    keywords: test-keywords-model
+    classification: test-classification-model
