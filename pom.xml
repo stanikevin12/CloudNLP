@@ -79,11 +79,12 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.wiremock</groupId>
-            <artifactId>wiremock-jetty11</artifactId>
-            <version>3.9.1</version>
-            <scope>test</scope>
-        </dependency>
+		<groupId>com.github.tomakehurst</groupId>
+		<artifactId>wiremock-standalone</artifactId>
+		<version>3.0.0</version>
+		<scope>test</scope>
+		</dependency>
+
 
         <!-- Mock NLP API (tests only) -->
         <dependency>
