@@ -125,7 +125,7 @@ public class NlpCloudService {
             return upstream;
         }
         if (throwable instanceof RestClientResponseException responseException) {
-            log.error("NLP Cloud returned {} for classification. Body: {}", responseException.getRawStatusCode(), responseException.getResponseBodyAsString());
+            log.error("NLP Cloud returned {} for classification. Body: {}", responseException.getStatusCode().value(), responseException.getResponseBodyAsString());
             return new UpstreamServiceException(
                     SAFE_UPSTREAM_MESSAGE,
                     responseException);

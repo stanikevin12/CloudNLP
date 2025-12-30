@@ -132,7 +132,7 @@ public class UnifiedNlpService {
             return upstream;
         }
         if (throwable instanceof RestClientResponseException responseException) {
-            log.error("NLP Cloud returned {} for {}. Body: {}", responseException.getRawStatusCode(), path, responseException.getResponseBodyAsString());
+            log.error("NLP Cloud returned {} for {}. Body: {}", responseException.getStatusCode().value(), path, responseException.getResponseBodyAsString());
             return new UpstreamServiceException(SAFE_UPSTREAM_MESSAGE, responseException);
         }
         if (throwable instanceof TimeoutException || throwable instanceof ResourceAccessException) {
