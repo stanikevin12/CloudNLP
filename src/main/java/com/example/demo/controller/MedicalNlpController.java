@@ -7,7 +7,7 @@ import com.example.demo.dto.EntityExtractionResponse;
 import com.example.demo.dto.GrammarResponse;
 import com.example.demo.dto.KeywordResponse;
 import com.example.demo.dto.SummaryResponse;
-import com.example.demo.service.MedicalNlpService;
+import com.example.demo.service.UnifiedNlpService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.headers.Header;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -29,9 +29,9 @@ public class MedicalNlpController {
 
     private static final Logger log = LoggerFactory.getLogger(MedicalNlpController.class);
 
-    private final MedicalNlpService medicalNlpService;
+    private final UnifiedNlpService medicalNlpService;
 
-    public MedicalNlpController(MedicalNlpService medicalNlpService) {
+    public MedicalNlpController(UnifiedNlpService medicalNlpService) {
         this.medicalNlpService = medicalNlpService;
     }
 

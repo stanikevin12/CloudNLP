@@ -7,8 +7,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.Objects;
-
 @Configuration
 public class NlpCloudClientConfig {
 
@@ -19,7 +17,8 @@ public class NlpCloudClientConfig {
         String baseUrl = normalizeBaseUrl(properties.getBaseUrl());
 
         validateRequiredModels(properties);
-        log.info("Configuring NLP Cloud client with base URL '{}' and task models {}", baseUrl, describeModels(properties));
+        log.info("Configuring NLP Cloud client with base URL '{}' and summarization model '{}' plus entities model '{}'", baseUrl,
+                safeValue(properties.getSummarizationModel()), safeValue(properties.getEntitiesModel()));
 
         return builder
                 .rootUri(baseUrl)
@@ -42,22 +41,10 @@ public class NlpCloudClientConfig {
         return sanitized;
     }
 
-    private String describeModels(NlpCloudProperties properties) {
-        NlpCloudProperties.Models models = properties.getModels();
-        return String.format("{grammar=%s, entities=%s, summarize=%s, keywords=%s, classification=%s}",
-                safeValue(models.getGrammar()),
-                safeValue(models.getEntities()),
-                safeValue(models.getSummarize()),
-                safeValue(models.getKeywords()),
-                safeValue(models.getClassification()));
-    }
-
     private void validateRequiredModels(NlpCloudProperties properties) {
-        NlpCloudProperties.Models models = properties.getModels();
-
-        if (isBlank(models.getGrammar()) || isBlank(models.getEntities()) || isBlank(models.getSummarize())
-                || isBlank(models.getKeywords()) || isBlank(models.getClassification())) {
-            throw new IllegalStateException("NLP Cloud task models must be configured for grammar, entities, summarize, keywords, and classification.");
+        if (isBlank(properties.getSummarizationModel()) || isBlank(properties.getEntitiesModel())
+                || isBlank(properties.getClassificationModel())) {
+            throw new IllegalStateException("NLP Cloud models must be configured for summarization, entities, and classification.");
         }
     }
 
