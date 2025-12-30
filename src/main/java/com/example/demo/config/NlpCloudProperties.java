@@ -8,12 +8,11 @@ import java.time.Duration;
 public class NlpCloudProperties {
 
     private String apiKey;
-    private String baseUrl = "https://api.nlpcloud.io/v1";
+    private String baseUrl = "https://api.nlpcloud.io";
     private Duration timeout = Duration.ofSeconds(5);
     private int maxRetries = 3;
     private String summarizationModel;
-    private String entitiesModel;
-    private String classificationModel;
+    private String summarizationEndpoint = "/summarization";
 
     public String getApiKey() {
         return apiKey;
@@ -55,19 +54,11 @@ public class NlpCloudProperties {
         this.summarizationModel = summarizationModel;
     }
 
-    public String getEntitiesModel() {
-        return entitiesModel;
+    public String getSummarizationEndpoint() {
+        return summarizationEndpoint;
     }
 
-    public void setEntitiesModel(String entitiesModel) {
-        this.entitiesModel = entitiesModel;
-    }
-
-    public String getClassificationModel() {
-        return classificationModel;
-    }
-
-    public void setClassificationModel(String classificationModel) {
-        this.classificationModel = classificationModel;
+    public void setSummarizationEndpoint(String summarizationEndpoint) {
+        this.summarizationEndpoint = summarizationEndpoint;
     }
 }

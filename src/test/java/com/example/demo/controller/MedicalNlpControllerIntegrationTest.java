@@ -2,9 +2,7 @@ package com.example.demo.controller;
 
 import com.example.demo.dto.ClinicalNoteRequest;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import okhttp3.mockwebserver.MockResponse;
-import okhttp3.mockwebserver.MockWebServer;
-import okhttp3.mockwebserver.RecordedRequest;
+import com.github.tomakehurst.wiremock.WireMockServer;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -23,9 +21,8 @@ import org.springframework.web.context.WebApplicationContext;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.concurrent.TimeUnit;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -34,16 +31,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class MedicalNlpControllerIntegrationTest {
 
-    private static final MockWebServer mockWebServer;
-
-    static {
-        mockWebServer = new MockWebServer();
-        try {
-            mockWebServer.start();
-        } catch (IOException e) {
-            throw new IllegalStateException("Failed to start MockWebServer", e);
-        }
-    }
+    private static final WireMockServer wireMockServer = new WireMockServer();
 
     @Autowired
     private WebApplicationContext context;
@@ -57,29 +45,26 @@ class MedicalNlpControllerIntegrationTest {
     static void registerProps(DynamicPropertyRegistry registry) {
         registry.add("nlpcloud.api-key", () -> "test-key");
         registry.add("nlpcloud.summarization-model", () -> "bart-large-cnn");
-        registry.add("nlpcloud.entities-model", () -> "mock-entities-model");
-        registry.add("nlpcloud.classification-model", () -> "mock-classification-model");
         registry.add("nlpcloud.timeout", () -> "2s");
         registry.add("nlpcloud.max-retries", () -> "0");
-        registry.add("nlpcloud.base-url", () -> mockWebServer.url("/v1").toString());
+        registry.add("nlpcloud.base-url", () -> wireMockServer.baseUrl());
     }
 
     @BeforeAll
     void setup() {
+        wireMockServer.start();
+        configureFor(wireMockServer.port());
         mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
     }
 
     @AfterEach
-    void resetMockWebServer() throws InterruptedException {
-        RecordedRequest recordedRequest;
-        while ((recordedRequest = mockWebServer.takeRequest(10, TimeUnit.MILLISECONDS)) != null) {
-            // Drain to avoid cross-test contamination of recorded requests.
-        }
+    void resetWireMock() {
+        reset();
     }
 
     @AfterAll
-    void tearDown() throws IOException {
-        mockWebServer.shutdown();
+    void tearDown() {
+        wireMockServer.stop();
     }
 
     @Test
@@ -97,8 +82,7 @@ class MedicalNlpControllerIntegrationTest {
                 .andExpect(jsonPath("$.error").value(nullValue()))
                 .andExpect(jsonPath("$.data.correctedText").isNotEmpty());
 
-        RecordedRequest recordedRequest = mockWebServer.takeRequest();
-        assertThat(recordedRequest.getPath()).isEqualTo("/v1/bart-large-cnn/summarization");
+        verify(postRequestedFor(urlEqualTo("/v1/bart-large-cnn/summarization")));
     }
 
     @Test
@@ -117,8 +101,7 @@ class MedicalNlpControllerIntegrationTest {
                 .andExpect(jsonPath("$.data.entities[0].text").value("John Doe"))
                 .andExpect(jsonPath("$.data.entities[1].entity").value("location"));
 
-        RecordedRequest recordedRequest = mockWebServer.takeRequest();
-        assertThat(recordedRequest.getPath()).isEqualTo("/v1/mock-entities-model/entities");
+        verify(postRequestedFor(urlEqualTo("/v1/bart-large-cnn/summarization")));
     }
 
     @Test
@@ -138,8 +121,7 @@ class MedicalNlpControllerIntegrationTest {
                 .andExpect(jsonPath("$.data.summary").value("This is a concise summary of the report."))
                 .andExpect(jsonPath("$.data.keyFindings[1]").value("Finding two"));
 
-        RecordedRequest recordedRequest = mockWebServer.takeRequest();
-        assertThat(recordedRequest.getPath()).isEqualTo("/v1/bart-large-cnn/summarization");
+        verify(postRequestedFor(urlEqualTo("/v1/bart-large-cnn/summarization")));
     }
 
     @Test
@@ -158,31 +140,15 @@ class MedicalNlpControllerIntegrationTest {
                 .andExpect(jsonPath("$.error").value(nullValue()))
                 .andExpect(jsonPath("$.data.keywords[0]").isNotEmpty());
 
-        RecordedRequest recordedRequest = mockWebServer.takeRequest();
-        assertThat(recordedRequest.getPath()).isEqualTo("/v1/bart-large-cnn/summarization");
-    }
-
-    @Test
-    void analyzeEndpointReturnsClassification() throws Exception {
-        enqueueFixture("src/test/resources/fixtures/classification.json");
-
-        mockMvc.perform(MockMvcRequestBuilders.post("/analyze")
-                        .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-                        .param("text", "Space travel"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value(200))
-                .andExpect(jsonPath("$.path").value("/analyze"))
-                .andExpect(jsonPath("$.medicalDisclaimer").value("This tool does not provide diagnosis."))
-                .andExpect(jsonPath("$.error").value(nullValue()))
-                .andExpect(jsonPath("$.data.labels[0]").value("space"))
-                .andExpect(jsonPath("$.data.scores[0]").value(0.83));
+        verify(postRequestedFor(urlEqualTo("/v1/bart-large-cnn/summarization")));
     }
 
     private void enqueueFixture(String path) throws IOException {
         String body = Files.readString(Path.of(path));
-        mockWebServer.enqueue(new MockResponse()
-                .setResponseCode(200)
-                .setHeader("Content-Type", "application/json")
-                .setBody(body));
+        wireMockServer.stubFor(post(urlEqualTo("/v1/bart-large-cnn/summarization"))
+                .willReturn(aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody(body)));
     }
 }

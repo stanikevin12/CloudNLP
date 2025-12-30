@@ -17,8 +17,6 @@ class NlpCloudClientConfigTest {
         properties.setBaseUrl("https://mock.nlpcloud.io");
         properties.setTimeout(Duration.ofSeconds(2));
         properties.setSummarizationModel("bart-large-cnn");
-        properties.setEntitiesModel("en_core_web_lg");
-        properties.setClassificationModel("bart-large-mnli-yahoo-answers");
 
         RestTemplate restTemplate = new NlpCloudClientConfig()
                 .nlpCloudRestTemplate(properties, new RestTemplateBuilder());
