@@ -39,19 +39,19 @@ public class MedicalNlpService {
     }
 
     public GrammarResponse checkGrammar(ClinicalNoteRequest request) {
-        return postForResponse("/grammar", request, mapper::toGrammarResponse);
+        return postForResponse(modelPath(properties.getModels().getGrammar(), "grammar"), request, mapper::toGrammarResponse);
     }
 
     public EntityExtractionResponse extractEntities(ClinicalNoteRequest request) {
-        return postForResponse("/entities", request, mapper::toEntityExtractionResponse);
+        return postForResponse(modelPath(properties.getModels().getEntities(), "entities"), request, mapper::toEntityExtractionResponse);
     }
 
     public SummaryResponse summarize(ClinicalNoteRequest request) {
-        return postForResponse("/summarize", request, mapper::toSummaryResponse);
+        return postForResponse(modelPath(properties.getModels().getSummarize(), "summarize"), request, mapper::toSummaryResponse);
     }
 
     public KeywordResponse keywords(ClinicalNoteRequest request) {
-        return postForResponse("/keywords", request, mapper::toKeywordResponse);
+        return postForResponse(modelPath(properties.getModels().getKeywords(), "keywords"), request, mapper::toKeywordResponse);
     }
 
     private <T> T postForResponse(String path,
@@ -143,6 +143,14 @@ public class MedicalNlpService {
             throw new UpstreamServiceException("NLP Cloud API key is missing. Please configure 'nlpcloud.api-key'.");
         }
         return apiKey;
+    }
+
+    private String modelPath(String model, String endpoint) {
+        String sanitizedModel = sanitize(model);
+        if (sanitizedModel == null || sanitizedModel.isBlank()) {
+            throw new UpstreamServiceException(String.format("NLP Cloud model for %s is missing. Please configure 'nlpcloud.models.%s'.", endpoint, endpoint));
+        }
+        return "/" + sanitizedModel + "/" + endpoint;
     }
 
     private String sanitize(String value) {

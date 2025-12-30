@@ -52,7 +52,11 @@ class MedicalNlpResilienceIntegrationTest {
     @DynamicPropertySource
     static void registerProps(DynamicPropertyRegistry registry) {
         registry.add("nlpcloud.api-key", () -> "test-key");
-        registry.add("nlpcloud.model", () -> "mock-model");
+        registry.add("nlpcloud.models.grammar", () -> "mock-grammar-model");
+        registry.add("nlpcloud.models.entities", () -> "mock-entities-model");
+        registry.add("nlpcloud.models.summarize", () -> "mock-summarize-model");
+        registry.add("nlpcloud.models.keywords", () -> "mock-keywords-model");
+        registry.add("nlpcloud.models.classification", () -> "mock-classification-model");
         registry.add("nlpcloud.timeout", () -> "250ms");
         registry.add("nlpcloud.max-retries", () -> "2");
         registry.add("nlpcloud.base-url", () -> mockWebServer.url("/v1").toString());
@@ -86,7 +90,7 @@ class MedicalNlpResilienceIntegrationTest {
                 .andExpect(jsonPath("$.medicalDisclaimer").value("This tool does not provide diagnosis."));
 
         RecordedRequest recordedRequest = mockWebServer.takeRequest();
-        assertThat(recordedRequest.getPath()).contains("/grammar");
+        assertThat(recordedRequest.getPath()).isEqualTo("/v1/mock-grammar-model/grammar");
     }
 
     @Test
@@ -107,7 +111,7 @@ class MedicalNlpResilienceIntegrationTest {
                 .andExpect(jsonPath("$.medicalDisclaimer").value("This tool does not provide diagnosis."));
 
         RecordedRequest recordedRequest = mockWebServer.takeRequest();
-        assertThat(recordedRequest.getPath()).contains("/grammar");
+        assertThat(recordedRequest.getPath()).isEqualTo("/v1/mock-grammar-model/grammar");
     }
 
     @Test
@@ -130,9 +134,9 @@ class MedicalNlpResilienceIntegrationTest {
         RecordedRequest second = mockWebServer.takeRequest();
         RecordedRequest third = mockWebServer.takeRequest();
 
-        assertThat(first.getPath()).contains("/grammar");
-        assertThat(second.getPath()).contains("/grammar");
-        assertThat(third.getPath()).contains("/grammar");
+        assertThat(first.getPath()).isEqualTo("/v1/mock-grammar-model/grammar");
+        assertThat(second.getPath()).isEqualTo("/v1/mock-grammar-model/grammar");
+        assertThat(third.getPath()).isEqualTo("/v1/mock-grammar-model/grammar");
     }
 }
 

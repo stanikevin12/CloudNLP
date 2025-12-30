@@ -45,9 +45,11 @@ public class NlpCloudService {
         HttpHeaders headers = authorizationHeaders();
         HttpEntity<ClassificationRequest> requestEntity = new HttpEntity<>(requestBody, headers);
 
-        return executeWithRetry(() -> {
+        String path = modelPath(properties.getModels().getClassification(), "classification");
+
+        return executeWithRetry(path, () -> {
             ResponseEntity<ClassificationResponse> response = nlpCloudRestTemplate.postForEntity(
-                    "/classification",
+                    path,
                     requestEntity,
                     ClassificationResponse.class
             );
@@ -56,14 +58,14 @@ public class NlpCloudService {
         });
     }
 
-    private <T> T executeWithRetry(SupplierWithException<T> action) {
+    private <T> T executeWithRetry(String path, SupplierWithException<T> action) {
         int attempts = Math.min(properties.getMaxRetries(), 2) + 1;
         for (int attempt = 1; attempt <= attempts; attempt++) {
             try {
                 return action.get();
             } catch (Exception ex) {
                 boolean retryable = attempt < attempts && isRetryable(ex);
-                log.warn("Attempt {}/{} failed calling /classification: {}", attempt, attempts, ex.getClass().getSimpleName());
+                log.warn("Attempt {}/{} failed calling {}: {}", attempt, attempts, path, ex.getClass().getSimpleName());
                 if (!retryable) {
                     throw mapUpstreamError(ex);
                 }
@@ -91,6 +93,14 @@ public class NlpCloudService {
             throw new UpstreamServiceException("NLP Cloud API key is missing. Please configure 'nlpcloud.api-key'.");
         }
         return apiKey;
+    }
+
+    private String modelPath(String model, String endpoint) {
+        String sanitizedModel = sanitize(model);
+        if (sanitizedModel == null || sanitizedModel.isBlank()) {
+            throw new UpstreamServiceException(String.format("NLP Cloud model for %s is missing. Please configure 'nlpcloud.models.%s'.", endpoint, endpoint));
+        }
+        return "/" + sanitizedModel + "/" + endpoint;
     }
 
     private String sanitize(String value) {

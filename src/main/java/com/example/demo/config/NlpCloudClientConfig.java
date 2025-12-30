@@ -16,26 +16,39 @@ public class NlpCloudClientConfig {
 
     @Bean
     public RestTemplate nlpCloudRestTemplate(NlpCloudProperties properties, RestTemplateBuilder builder) {
-        String model = sanitize(properties.getModel());
+        String baseUrl = normalizeBaseUrl(properties.getBaseUrl());
 
-        validateModel(model);
-
-        log.info("Configuring NLP Cloud client with base URL '{}' and model '{}'", properties.getBaseUrl(), model);
+        log.info("Configuring NLP Cloud client with base URL '{}' and task models {}", baseUrl, describeModels(properties));
 
         return builder
-                .rootUri(properties.getBaseUrl() + "/" + model)
+                .rootUri(baseUrl)
                 .setConnectTimeout(properties.getTimeout())
                 .setReadTimeout(properties.getTimeout())
                 .build();
     }
 
-    private String sanitize(String value) {
-        return value == null ? null : value.trim();
+    private String normalizeBaseUrl(String baseUrl) {
+        if (baseUrl == null) {
+            return "";
+        }
+        String sanitized = baseUrl.trim();
+        if (sanitized.endsWith("/")) {
+            return sanitized.substring(0, sanitized.length() - 1);
+        }
+        return sanitized;
     }
 
-    private void validateModel(String model) {
-        if (model == null || model.isBlank()) {
-            throw new IllegalStateException("NLP Cloud model is missing. Please configure 'nlpcloud.model' with an active model.");
-        }
+    private String describeModels(NlpCloudProperties properties) {
+        NlpCloudProperties.Models models = properties.getModels();
+        return String.format("{grammar=%s, entities=%s, summarize=%s, keywords=%s, classification=%s}",
+                safeValue(models.getGrammar()),
+                safeValue(models.getEntities()),
+                safeValue(models.getSummarize()),
+                safeValue(models.getKeywords()),
+                safeValue(models.getClassification()));
+    }
+
+    private String safeValue(String value) {
+        return value == null ? "" : value.trim();
     }
 }

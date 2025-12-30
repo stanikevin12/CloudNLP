@@ -19,9 +19,14 @@ server:
   port: 8085
 
 nlpcloud:
-  # Required: export NLP_CLOUD_API_KEY and NLP_CLOUD_MODEL in your environment for production use.
+  # Required: export NLP_CLOUD_API_KEY and task-specific NLP_CLOUD_*_MODEL variables for production use.
   api-key: ${NLP_CLOUD_API_KEY:***redacted***}
-  model: ${NLP_CLOUD_MODEL:bart-large-mnli-yahoo-answers}
   base-url: ${NLP_CLOUD_BASE_URL:https://api.nlpcloud.io/v1}
   timeout: ${NLP_CLOUD_TIMEOUT:5s}
   max-retries: ${NLP_CLOUD_MAX_RETRIES:2}
+  models:
+    grammar: ${NLP_CLOUD_GRAMMAR_MODEL:gpt-neox-20b}
+    entities: ${NLP_CLOUD_ENTITIES_MODEL:en_core_web_trf}
+    summarize: ${NLP_CLOUD_SUMMARIZE_MODEL:bart-large-cnn}
+    keywords: ${NLP_CLOUD_KEYWORDS_MODEL:keyphrase-extraction-multilingual}
+    classification: ${NLP_CLOUD_CLASSIFICATION_MODEL:bart-large-mnli-yahoo-answers}
