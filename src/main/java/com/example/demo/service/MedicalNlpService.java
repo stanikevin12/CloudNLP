@@ -151,7 +151,8 @@ public class MedicalNlpService {
         if (sanitizedModel == null || sanitizedModel.isBlank()) {
             throw new UpstreamServiceException(String.format("NLP Cloud model for %s is missing. Please configure 'nlpcloud.models.%s'.", task.endpoint(), task.endpoint()));
         }
-        return "/" + sanitizedModel + "/" + task.endpoint();
+        String normalizedModel = sanitizedModel.replaceAll("^/+|/+$", "");
+        return "/" + normalizedModel + "/" + task.endpoint();
     }
 
     private String sanitize(String value) {
