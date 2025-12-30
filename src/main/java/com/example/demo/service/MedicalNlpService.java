@@ -20,6 +20,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
+import java.util.Objects;
 
 @Service
 public class MedicalNlpService {
@@ -62,9 +63,9 @@ public class MedicalNlpService {
             payload.put("context", request.getPatientContext());
         }
 
+        HttpHeaders headers = authorizationHeaders();
+
         String responseBody = executeWithRetry(path, () -> {
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
             HttpEntity<Map<String, String>> requestEntity = new HttpEntity<>(payload, headers);
 
             ResponseEntity<String> response = nlpCloudRestTemplate.postForEntity(path, requestEntity, String.class);
@@ -127,5 +128,24 @@ public class MedicalNlpService {
     @FunctionalInterface
     private interface SupplierWithException<T> {
         T get() throws Exception;
+    }
+
+    private HttpHeaders authorizationHeaders() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set(HttpHeaders.AUTHORIZATION, "Token " + resolveApiKey());
+        return headers;
+    }
+
+    private String resolveApiKey() {
+        String apiKey = sanitize(properties.getApiKey());
+        if (apiKey == null || apiKey.isBlank() || Objects.equals(apiKey, "***redacted***")) {
+            throw new UpstreamServiceException("NLP Cloud API key is missing. Please configure 'nlpcloud.api-key'.");
+        }
+        return apiKey;
+    }
+
+    private String sanitize(String value) {
+        return value == null ? null : value.trim();
     }
 }

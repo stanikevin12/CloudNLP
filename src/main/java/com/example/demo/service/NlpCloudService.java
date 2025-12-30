@@ -18,6 +18,7 @@ import org.springframework.web.client.RestTemplate;
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
+import java.util.Objects;
 
 @Service
 public class NlpCloudService {
@@ -41,11 +42,10 @@ public class NlpCloudService {
                 true
         );
 
-        return executeWithRetry(() -> {
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            HttpEntity<ClassificationRequest> requestEntity = new HttpEntity<>(requestBody, headers);
+        HttpHeaders headers = authorizationHeaders();
+        HttpEntity<ClassificationRequest> requestEntity = new HttpEntity<>(requestBody, headers);
 
+        return executeWithRetry(() -> {
             ResponseEntity<ClassificationResponse> response = nlpCloudRestTemplate.postForEntity(
                     "/classification",
                     requestEntity,
@@ -76,6 +76,25 @@ public class NlpCloudService {
             }
         }
         throw new UpstreamServiceException(SAFE_UPSTREAM_MESSAGE, null);
+    }
+
+    private HttpHeaders authorizationHeaders() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set(HttpHeaders.AUTHORIZATION, "Token " + resolveApiKey());
+        return headers;
+    }
+
+    private String resolveApiKey() {
+        String apiKey = sanitize(properties.getApiKey());
+        if (apiKey == null || apiKey.isBlank() || Objects.equals(apiKey, "***redacted***")) {
+            throw new UpstreamServiceException("NLP Cloud API key is missing. Please configure 'nlpcloud.api-key'.");
+        }
+        return apiKey;
+    }
+
+    private String sanitize(String value) {
+        return value == null ? null : value.trim();
     }
 
     private boolean isRetryable(Throwable throwable) {

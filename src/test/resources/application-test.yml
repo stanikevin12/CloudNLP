@@ -1,0 +1,6 @@
+nlpcloud:
+  api-key: test-api-key
+  model: test-model
+  base-url: http://localhost
+  timeout: 1s
+  max-retries: 0
