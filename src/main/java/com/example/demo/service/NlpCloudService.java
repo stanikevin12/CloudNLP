@@ -1,6 +1,7 @@
 package com.example.demo.service;
 
 import com.example.demo.config.NlpCloudProperties;
+import com.example.demo.config.model.NlpTask;
 import com.example.demo.dto.ClassificationRequest;
 import com.example.demo.dto.ClassificationResponse;
 import com.example.demo.exception.UpstreamServiceException;
@@ -45,7 +46,7 @@ public class NlpCloudService {
         HttpHeaders headers = authorizationHeaders();
         HttpEntity<ClassificationRequest> requestEntity = new HttpEntity<>(requestBody, headers);
 
-        String path = modelPath(properties.getModels().getClassification(), "classification");
+        String path = modelPath(NlpTask.CLASSIFICATION);
 
         return executeWithRetry(path, () -> {
             ResponseEntity<ClassificationResponse> response = nlpCloudRestTemplate.postForEntity(
@@ -95,12 +96,12 @@ public class NlpCloudService {
         return apiKey;
     }
 
-    private String modelPath(String model, String endpoint) {
-        String sanitizedModel = sanitize(model);
+    private String modelPath(NlpTask task) {
+        String sanitizedModel = sanitize(properties.getModels().getModelForTask(task));
         if (sanitizedModel == null || sanitizedModel.isBlank()) {
-            throw new UpstreamServiceException(String.format("NLP Cloud model for %s is missing. Please configure 'nlpcloud.models.%s'.", endpoint, endpoint));
+            throw new UpstreamServiceException(String.format("NLP Cloud model for %s is missing. Please configure 'nlpcloud.models.%s'.", task.endpoint(), task.endpoint()));
         }
-        return "/" + sanitizedModel + "/" + endpoint;
+        return "/" + sanitizedModel + "/" + task.endpoint();
     }
 
     private String sanitize(String value) {

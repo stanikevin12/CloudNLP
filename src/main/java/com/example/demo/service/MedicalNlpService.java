@@ -1,6 +1,7 @@
 package com.example.demo.service;
 
 import com.example.demo.config.NlpCloudProperties;
+import com.example.demo.config.model.NlpTask;
 import com.example.demo.dto.*;
 import com.example.demo.exception.UpstreamServiceException;
 import com.example.demo.mapper.NlpCloudMapper;
@@ -39,19 +40,19 @@ public class MedicalNlpService {
     }
 
     public GrammarResponse checkGrammar(ClinicalNoteRequest request) {
-        return postForResponse(modelPath(properties.getModels().getGrammar(), "grammar"), request, mapper::toGrammarResponse);
+        return postForResponse(modelPath(NlpTask.GRAMMAR), request, mapper::toGrammarResponse);
     }
 
     public EntityExtractionResponse extractEntities(ClinicalNoteRequest request) {
-        return postForResponse(modelPath(properties.getModels().getEntities(), "entities"), request, mapper::toEntityExtractionResponse);
+        return postForResponse(modelPath(NlpTask.ENTITIES), request, mapper::toEntityExtractionResponse);
     }
 
     public SummaryResponse summarize(ClinicalNoteRequest request) {
-        return postForResponse(modelPath(properties.getModels().getSummarize(), "summarize"), request, mapper::toSummaryResponse);
+        return postForResponse(modelPath(NlpTask.SUMMARIZE), request, mapper::toSummaryResponse);
     }
 
     public KeywordResponse keywords(ClinicalNoteRequest request) {
-        return postForResponse(modelPath(properties.getModels().getKeywords(), "keywords"), request, mapper::toKeywordResponse);
+        return postForResponse(modelPath(NlpTask.KEYWORDS), request, mapper::toKeywordResponse);
     }
 
     private <T> T postForResponse(String path,
@@ -145,12 +146,12 @@ public class MedicalNlpService {
         return apiKey;
     }
 
-    private String modelPath(String model, String endpoint) {
-        String sanitizedModel = sanitize(model);
+    private String modelPath(NlpTask task) {
+        String sanitizedModel = sanitize(properties.getModels().getModelForTask(task));
         if (sanitizedModel == null || sanitizedModel.isBlank()) {
-            throw new UpstreamServiceException(String.format("NLP Cloud model for %s is missing. Please configure 'nlpcloud.models.%s'.", endpoint, endpoint));
+            throw new UpstreamServiceException(String.format("NLP Cloud model for %s is missing. Please configure 'nlpcloud.models.%s'.", task.endpoint(), task.endpoint()));
         }
-        return "/" + sanitizedModel + "/" + endpoint;
+        return "/" + sanitizedModel + "/" + task.endpoint();
     }
 
     private String sanitize(String value) {

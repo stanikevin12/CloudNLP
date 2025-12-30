@@ -1,5 +1,6 @@
 package com.example.demo.config;
 
+import com.example.demo.config.model.NlpTask;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.time.Duration;
@@ -60,6 +61,16 @@ public class NlpCloudProperties {
         private String summarize;
         private String keywords;
         private String classification;
+
+        public String getModelForTask(NlpTask task) {
+            return switch (task) {
+                case GRAMMAR -> grammar;
+                case ENTITIES -> entities;
+                case SUMMARIZE -> summarize;
+                case KEYWORDS -> keywords;
+                case CLASSIFICATION -> classification;
+            };
+        }
 
         public String getGrammar() {
             return grammar;

@@ -33,7 +33,10 @@ public class NlpCloudClientConfig {
         }
         String sanitized = baseUrl.trim();
         if (sanitized.endsWith("/")) {
-            return sanitized.substring(0, sanitized.length() - 1);
+            sanitized = sanitized.substring(0, sanitized.length() - 1);
+        }
+        if (!sanitized.endsWith("/v1")) {
+            sanitized = sanitized + "/v1";
         }
         return sanitized;
     }
