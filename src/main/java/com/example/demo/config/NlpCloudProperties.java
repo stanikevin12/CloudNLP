@@ -21,8 +21,15 @@ public class NlpCloudProperties {
 
     private int maxRetries = 3;
 
-    // ===== Summarization =====
+    // Keywords
+    private String keywordModel;
+    private String keywordEndpoint;
 
+    // Grammar
+    private String grammarModel;
+    private String grammarEndpoint;
+
+    // ===== Summarization =====
     @NotBlank
     private String summarizationModel;
 
@@ -69,6 +76,23 @@ public class NlpCloudProperties {
         this.maxRetries = maxRetries;
     }
 
+    public String getKeywordModel() {
+        return keywordModel;
+    }
+
+    public void setKeywordModel(String keywordModel) {
+        this.keywordModel = keywordModel;
+    }
+
+    public String getKeywordEndpoint() {
+        return keywordEndpoint;
+    }
+
+    public void setKeywordEndpoint(String keywordEndpoint) {
+        this.keywordEndpoint = keywordEndpoint;
+    }
+
+
     public String getSummarizationModel() {
         return summarizationModel;
     }
@@ -99,5 +123,21 @@ public class NlpCloudProperties {
 
     public void setEntityEndpoint(String entityEndpoint) {
         this.entityEndpoint = entityEndpoint;
+    }
+
+    public String getGrammarModel() {
+        return grammarModel;
+    }
+
+    public void setGrammarModel(String grammarModel) {
+        this.grammarModel = grammarModel;
+    }
+
+    public String getGrammarEndpoint() {
+        return grammarEndpoint;
+    }
+
+    public void setGrammarEndpoint(String grammarEndpoint) {
+        this.grammarEndpoint = grammarEndpoint;
     }
 }

@@ -16,29 +16,23 @@ public class EntityExtractionService extends BaseNlpCloudService {
 
     private final NlpCloudMapper mapper;
 
-    public EntityExtractionService(
-            RestTemplate restTemplate,
-            NlpCloudProperties properties,
-            NlpCloudMapper mapper
-    ) {
-        super(restTemplate, properties);
+    public EntityExtractionService(RestTemplate rt, NlpCloudProperties props, NlpCloudMapper mapper) {
+        super(rt, props);
         this.mapper = mapper;
     }
 
     public EntityExtractionResponse extractEntities(ClinicalNoteRequest request) {
-        Map<String, String> payload = Map.of("text", request.getNote());
-
         String path = "/" + properties.getEntityModel()
                 + properties.getEntityEndpoint();
 
-        return executeWithRetry(path, () -> {
-            HttpEntity<Map<String, String>> entity =
-                    new HttpEntity<>(payload, authHeaders());
+        return executeWithRetry(() -> {
+            var payload = Map.of("text", request.getNote());
 
-            ResponseEntity<String> response =
-                    restTemplate.postForEntity(path, entity, String.class);
+            String response = restTemplate.postForObject(
+                    path, buildRequest(payload), String.class
+            );
 
-            return mapper.toEntityExtractionResponse(response.getBody());
+            return mapper.toEntityExtractionResponse(response);
         });
     }
 }

@@ -1,18 +1,25 @@
 package com.example.demo.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-
 import java.util.List;
 
 @Schema(description = "Summarization output")
 public class SummaryResponse {
+
     @Schema(description = "Summary text returned by the model", example = "This is a concise summary of the report.")
     private String summary;
 
-    @Schema(description = "Optional key findings extracted during summarization", example = "[\"Finding one\", \"Finding two\"]")
+    @Schema(description = "Optional key findings extracted during summarization",
+            example = "[\"Finding one\", \"Finding two\"]")
     private List<String> keyFindings;
 
     public SummaryResponse() {
+    }
+
+    // ✅ ADD THIS
+    public SummaryResponse(String summary) {
+        this.summary = summary;
+        this.keyFindings = List.of();
     }
 
     public SummaryResponse(String summary, List<String> keyFindings) {
