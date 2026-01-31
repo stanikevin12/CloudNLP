@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,9 +39,10 @@ class MedicalNlpControllerIntegrationTest {
 
     private static WireMockServer wireMockServer;
 
-    static {
-    wireMockServer = new WireMockServer(options().dynamicPort());
-    wireMockServer.start();
+    @BeforeAll
+    static void startWireMock() {
+        wireMockServer = new WireMockServer(options().dynamicPort());
+        wireMockServer.start();
     }
 
     @Autowired

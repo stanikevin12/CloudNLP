@@ -34,12 +34,13 @@ public abstract class BaseNlpCloudService {
 
     protected <T> T executeWithRetry(Supplier<T> supplier) {
         int maxRetries = 5;
-        long delay = 1000; // 1 second
+        long delay = 3000; // 1 second
         for (int i = 1; i <= maxRetries; i++) {
             try {
                 return supplier.get();
             } catch (HttpStatusCodeException ex) {
                 if (ex.getStatusCode() == HttpStatus.TOO_MANY_REQUESTS) {
+
                     log.info("Rate limit hit, retrying in {}ms (attempt {}/{})", delay, i, maxRetries);
                     try {
                         Thread.sleep(delay);

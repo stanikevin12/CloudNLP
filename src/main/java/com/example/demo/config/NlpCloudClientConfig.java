@@ -7,6 +7,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.client.RestTemplate;
 
+import java.time.Duration;
+
 @Configuration
 public class NlpCloudClientConfig {
 
@@ -22,7 +24,7 @@ public class NlpCloudClientConfig {
         return builder
                 .rootUri(baseUrl)
                 .setConnectTimeout(properties.getTimeout())
-                .setReadTimeout(properties.getTimeout())
+                .setReadTimeout(Duration.ofSeconds(60))
                 .build();
     }
 

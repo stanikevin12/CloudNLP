@@ -13,10 +13,19 @@ import org.springframework.web.filter.OncePerRequestFilter;
 public class MedicalDisclaimerFilter extends OncePerRequestFilter {
 
     public static final String DISCLAIMER_HEADER = "X-Medical-Disclaimer";
+    
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        return request.getRequestURI().startsWith("/health");
+    }
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+    protected void doFilterInternal(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            FilterChain filterChain)
             throws ServletException, IOException {
+
         response.setHeader(DISCLAIMER_HEADER, ApiResult.MEDICAL_DISCLAIMER);
         filterChain.doFilter(request, response);
     }
