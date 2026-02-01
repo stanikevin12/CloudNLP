@@ -15,11 +15,15 @@ public class NlpCloudClientConfig {
     private static final Logger log = LoggerFactory.getLogger(NlpCloudClientConfig.class);
 
     @Bean
-    public RestTemplate nlpCloudRestTemplate(NlpCloudProperties properties, RestTemplateBuilder builder) {
+    public RestTemplate nlpCloudRestTemplate(
+            NlpCloudProperties properties,
+            RestTemplateBuilder builder) {
+
         String baseUrl = normalizeBaseUrl(properties.getBaseUrl());
-        log.info("NLP Cloud base URL     → {}", baseUrl);
-        log.info("Configuring NLP Cloud client with base URL '{}' and summarization model '{}'", baseUrl,
-                safeValue(properties.getSummarizationModel()));
+
+        log.info("NLP Cloud base URL → {}", baseUrl);
+        log.info("NLP Cloud API key configured → {}",
+                properties.getApiKey() != null && !properties.getApiKey().isBlank());
 
         return builder
                 .rootUri(baseUrl)
@@ -28,21 +32,25 @@ public class NlpCloudClientConfig {
                 .build();
     }
 
+    /**
+     * Ensures base URL is normalized to:
+     * https://api.nlpcloud.io/v1
+     */
     private String normalizeBaseUrl(String baseUrl) {
-        if (baseUrl == null) {
-            return "";
+        if (baseUrl == null || baseUrl.isBlank()) {
+            return "https://api.nlpcloud.io/v1";
         }
+
         String sanitized = baseUrl.trim();
+
         if (sanitized.endsWith("/")) {
             sanitized = sanitized.substring(0, sanitized.length() - 1);
         }
+
         if (!sanitized.endsWith("/v1")) {
             sanitized = sanitized + "/v1";
         }
-        return sanitized;
-    }
 
-    private String safeValue(String value) {
-        return value == null ? "" : value.trim();
+        return sanitized;
     }
 }
